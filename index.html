@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>프릿지 콘텐츠 자동 배포</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>프릿지 콘텐츠 자동 배포</h1>
+    <p class="subtitle">1개 소스 입력 → 인스타그램·스레드·네이버블로그·프릿지매거진 4채널 콘텐츠 생성</p>
+  </header>
+
+  <main>
+    <section class="panel input-panel">
+      <h2>1. 입력</h2>
+      <form id="content-form">
+        <label>
+          콘텐츠 유형
+          <select id="contentType"></select>
+        </label>
+        <label>
+          대상 브랜드 / 상품
+          <select id="targetBrand"></select>
+        </label>
+        <label>
+          핵심 메시지 <span class="hint">(이번 건에만 해당하는 내용을 자유롭게 작성)</span>
+          <textarea id="coreMessage" rows="4" placeholder="예: 여름을 이겨내는 필수템 베스트3, 시원하고 실용적인 구성으로..."></textarea>
+        </label>
+        <label>
+          참고 상품 URL <span class="hint">(선택 — 상품 추천형 콘텐츠일 때)</span>
+          <input type="url" id="productUrl" placeholder="https://f-ridge.com/products/...">
+        </label>
+        <label>
+          이미지 <span class="hint">(율사이트에서 제작한 이미지 업로드 — 인스타/스레드 자동 게시용)</span>
+          <input type="file" id="imageFile" accept="image/*">
+        </label>
+        <button type="submit" id="generate-btn">문구 생성</button>
+      </form>
+      <p id="generate-status" class="status" role="status"></p>
+    </section>
+
+    <section class="panel result-panel">
+      <h2>2. 채널별 결과</h2>
+      <div id="results" class="channel-grid">
+        <article class="channel-card" data-channel="instagram">
+          <h3>인스타그램 <span class="badge badge-auto">자동</span></h3>
+          <div class="channel-body"><p class="placeholder">문구 생성 후 이곳에 표시됩니다.</p></div>
+          <div class="channel-actions">
+            <button class="publish-btn" data-channel="instagram" disabled>발행</button>
+          </div>
+        </article>
+
+        <article class="channel-card" data-channel="threads">
+          <h3>스레드 <span class="badge badge-auto">자동</span></h3>
+          <div class="channel-body"><p class="placeholder">문구 생성 후 이곳에 표시됩니다.</p></div>
+          <div class="channel-actions">
+            <button class="publish-btn" data-channel="threads" disabled>발행</button>
+          </div>
+        </article>
+
+        <article class="channel-card" data-channel="naverBlog">
+          <h3>네이버 블로그 <span class="badge badge-semi">반자동</span></h3>
+          <div class="channel-body"><p class="placeholder">문구 생성 후 이곳에 표시됩니다.</p></div>
+          <div class="channel-actions">
+            <button class="copy-btn" data-channel="naverBlog" disabled>복사</button>
+            <span class="hint">복사 후 네이버 블로그 에디터에 붙여넣으세요.</span>
+          </div>
+        </article>
+
+        <article class="channel-card" data-channel="fridgeMagazine">
+          <h3>프릿지 매거진 <span class="badge badge-semi">반자동</span></h3>
+          <div class="channel-body"><p class="placeholder">문구 생성 후 이곳에 표시됩니다.</p></div>
+          <div class="channel-actions">
+            <button class="copy-btn" data-channel="fridgeMagazine" disabled>복사</button>
+            <span class="hint">복사 후 아임웹 매거진 글쓰기 화면에 붙여넣으세요.</span>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
