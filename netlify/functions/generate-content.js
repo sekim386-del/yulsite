@@ -12,6 +12,11 @@
  *     "productUrl": "https://f-ridge.com/products/..."  // 선택. 상품 추천형 콘텐츠일 때만
  *   }
  *
+ * productUrl이 오면 해당 페이지를 직접 열람(크롤링)해 본문 텍스트를 추출한 뒤 AI에게 참고
+ * 자료로 함께 전달합니다. (1차 미팅 회의록 8번 — "AI가 상품 상세페이지 URL을 직접 열람해
+ * 특징을 파악할 수 있는지" 테스트 항목) 페이지를 못 가져오는 경우에도 생성 자체는 계속 진행하며,
+ * 응답의 productContext.fetched 값으로 성공 여부를 알려줍니다.
+ *
  * 1번의 입력으로 4개 채널에 맞는 문구를 한 번에 생성합니다(OSMU: One Source Multi Use).
  * 채널별 규격:
  *   - 인스타그램 · 스레드 : 짧게 끊어 쓴 문구 + 해시태그
@@ -43,7 +48,56 @@ var SYSTEM_INSTRUCTION = [
   '600~900자 내외로 충분히 풀어 써주세요.'
 ].join('\n');
 
-function buildUserPrompt(body) {
+var PRODUCT_CONTEXT_MAX_CHARS = 4000;
+var PRODUCT_FETCH_TIMEOUT_MS = 8000;
+
+// 상품 상세페이지 HTML에서 본문으로 추정되는 텍스트만 뽑아냅니다 (외부 라이브러리 없이 정규식 기반).
+function htmlToText(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// productUrl을 직접 열람(크롤링)해 본문 텍스트를 가져옵니다. 실패해도 예외를 던지지 않고
+// { fetched: false, reason } 형태로 알려주기만 합니다 — 상품 URL이 있어도 문구 생성 자체는
+// 항상 진행되어야 하기 때문입니다.
+async function fetchProductContext(productUrl) {
+  var controller = new AbortController();
+  var timer = setTimeout(function () { controller.abort(); }, PRODUCT_FETCH_TIMEOUT_MS);
+
+  try {
+    var res = await fetch(productUrl, {
+      signal: controller.signal,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; YulsiteContentBot/1.0)' }
+    });
+    if (!res.ok) {
+      return { fetched: false, reason: 'http_' + res.status };
+    }
+    var html = await res.text();
+    var text = htmlToText(html).slice(0, PRODUCT_CONTEXT_MAX_CHARS);
+    if (!text) {
+      return { fetched: false, reason: 'empty_page' };
+    }
+    return { fetched: true, text: text };
+  } catch (err) {
+    var reason = err && err.name === 'AbortError' ? 'timeout' : 'fetch_failed';
+    return { fetched: false, reason: reason };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function buildUserPrompt(body, productContext) {
   var lines = [
     '콘텐츠 유형: ' + body.contentType,
     '대상 브랜드/상품: ' + body.targetBrand,
@@ -51,6 +105,12 @@ function buildUserPrompt(body) {
   ];
   if (body.productUrl) {
     lines.push('참고 상품 URL: ' + body.productUrl);
+    if (productContext && productContext.fetched) {
+      lines.push('상품 페이지에서 확인한 내용(참고용, 과장/오류 없이 반영):');
+      lines.push(productContext.text);
+    } else {
+      lines.push('(상품 페이지를 직접 열람하지 못했습니다 — 위 핵심 메시지만으로 작성해주세요.)');
+    }
   }
   return lines.join('\n');
 }
@@ -84,13 +144,18 @@ exports.handler = async function (event) {
   var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL +
     ':generateContent?key=' + encodeURIComponent(GEMINI_API_KEY);
 
+  var productContext = null;
+  if (body.productUrl) {
+    productContext = await fetchProductContext(body.productUrl);
+  }
+
   try {
     var res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
-        contents: [{ parts: [{ text: buildUserPrompt(body) }] }]
+        contents: [{ parts: [{ text: buildUserPrompt(body, productContext) }] }]
       })
     });
     var data = await res.json();
@@ -114,7 +179,11 @@ exports.handler = async function (event) {
       return shared.json(502, { ok: false, error: 'invalid_json_from_model', raw: text });
     }
 
-    return shared.json(200, { ok: true, channels: channels });
+    var responseBody = { ok: true, channels: channels };
+    if (productContext) {
+      responseBody.productContext = { fetched: productContext.fetched, reason: productContext.reason };
+    }
+    return shared.json(200, responseBody);
   } catch (err) {
     return shared.json(500, { ok: false, error: 'unexpected_error', detail: String(err) });
   }
