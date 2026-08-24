@@ -121,6 +121,15 @@ button {
 .badge-auto { background: #e2f1e2; color: var(--green-700); }
 .badge-semi { background: #fbeecf; color: #8a6416; }
 
+.char-count {
+  margin-left: auto;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.char-count.over { color: var(--danger); font-weight: 600; }
+
 .channel-body { font-size: 0.85rem; white-space: pre-wrap; line-height: 1.5; min-height: 80px; }
 .placeholder { color: var(--text-muted); }
 

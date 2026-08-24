@@ -119,9 +119,19 @@
     return (c.title ? c.title + '\n\n' : '') + (c.body || '');
   }
 
+  // netlify/functions/generate-content.js의 CHAR_LIMITS와 동일한 값 — 화면에 글자수를 보여주기 위한 표시용.
+  var CHAR_LIMITS = { instagram: 300, threads: 300, naverBlog: 2000, fridgeMagazine: 900 };
+
   function renderCard(channel, text) {
     var card = document.querySelector('.channel-card[data-channel="' + channel + '"] .channel-body');
     card.textContent = text || '(생성된 내용이 없습니다)';
+
+    var countEl = document.querySelector('.char-count[data-count="' + channel + '"]');
+    if (!countEl) return;
+    var len = (text || '').length;
+    var limit = CHAR_LIMITS[channel];
+    countEl.textContent = text ? len + ' / ' + limit + '자' : '';
+    countEl.classList.toggle('over', len > limit);
   }
 
   function getChannelText(channel) {
