@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "Noto Sans KR", "Malgun Gothic", sans-serif;
+      margin: 0; padding: 24px; background-color: #fbfbf5; color: #14201a;
+    }
+    .container { max-width: 1000px; margin: 0 auto; }
+    h1 { font-size: 22px; color: #14201a; margin: 0 0 4px; }
+    .sub { color: #566253; font-size: 13px; margin: 0 0 22px; }
+
+    .board { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 820px) { .board { grid-template-columns: 1fr; } }
+
+    .panel { background: #fff; border: 1px solid #e2e9d3; border-radius: 12px; padding: 20px; }
+    .panel h2 { font-size: 15px; margin: 0 0 14px; }
+
+    .field { margin-bottom: 14px; }
+    label { display: block; font-size: 12px; font-weight: 700; color: #566253; margin-bottom: 5px; }
+    .hint { font-weight: 400; color: #8a9284; }
+    select, input[type="text"], input[type="url"], textarea {
+      width: 100%; padding: 9px 10px; border: 1px solid #e2e9d3; border-radius: 7px;
+      font-size: 13px; font-family: inherit; background: #f7faf1;
+    }
+    textarea { min-height: 72px; resize: vertical; }
+
+    button {
+      cursor: pointer; border: none; border-radius: 8px; padding: 10px 16px;
+      font-size: 13px; font-weight: 700; font-family: inherit;
+    }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+
+    #generateBtn { width: 100%; background: #1c8a50; color: #fff; }
+    #generateBtn:hover:not(:disabled) { background: #136a3d; }
+
+    .status { min-height: 18px; font-size: 12px; color: #566253; margin-top: 8px; }
+    .status.error { color: #c0402c; }
+
+    .results { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 640px) { .results { grid-template-columns: 1fr; } }
+
+    .card { background: #fff; border: 1px solid #e2e9d3; border-radius: 12px; overflow: hidden; display: none; flex-direction: column; }
+    .card.show { display: flex; }
+    .card-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #eef5e4; border-bottom: 1px solid #e2e9d3; }
+    .card-head h3 { margin: 0; font-size: 13px; }
+    .badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+    .badge.auto { background: #e4f3da; color: #1c8a50; }
+    .badge.semi { background: #fdf0d6; color: #c98a1e; }
+    .card-body { padding: 14px; font-size: 13px; white-space: pre-wrap; line-height: 1.6; min-height: 70px; }
+    .card-body .ttl { font-weight: 700; display: block; margin-bottom: 6px; }
+    .tags { padding: 0 14px 12px; font-size: 12px; color: #1c8a50; }
+    .card-foot { margin-top: auto; display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-top: 1px solid #e2e9d3; background: #fafcf6; }
+    .card-foot button.primary { background: #1c8a50; color: #fff; }
+    .card-foot button.copy { background: #eef5e4; color: #14201a; }
+    .card-foot .note { font-size: 11px; color: #8a9284; }
+
+    .empty { color: #8a9284; font-size: 13px; padding: 40px 0; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>프릿지 OSMU 콘텐츠 엔진</h1>
+    <p class="sub">율사이트 · 1개 소스 → 인스타그램·스레드·네이버블로그·프릿지매거진 4채널 콘텐츠 자동 생성 (Google Apps Script 버전)</p>
+
+    <div class="board">
+      <div class="panel">
+        <h2>1. 입력</h2>
+        <div class="field">
+          <label>콘텐츠 유형</label>
+          <select id="contentType">
+            <option>입점사 소개</option>
+            <option>상품 추천</option>
+            <option>이벤트 / 프로모션</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>대상 브랜드 / 상품</label>
+          <input type="text" id="targetBrand" placeholder="예: ○○공방">
+        </div>
+        <div class="field">
+          <label>핵심 메시지 <span class="hint">(자유 작성)</span></label>
+          <textarea id="coreMessage" placeholder="예: 재생 원단으로 만든 여름 리넨 백, 하나를 사면 나무 한 그루를 심습니다"></textarea>
+        </div>
+        <div class="field">
+          <label>참고 상품 URL <span class="hint">(선택)</span></label>
+          <input type="url" id="productUrl" placeholder="https://f-ridge.com/products/...">
+        </div>
+        <div class="field">
+          <label>이미지 <span class="hint">(발행 시 필요 — 인스타/스레드 자동 발행용)</span></label>
+          <input type="file" id="imageFile" accept="image/*">
+        </div>
+        <button id="generateBtn" onclick="handleGenerate()">문구 생성</button>
+        <p class="status" id="status" role="status"></p>
+      </div>
+
+      <div>
+        <h2 style="font-size:15px; margin:0 0 14px;">2. 채널별 결과</h2>
+        <div class="results" id="results">
+          <p class="empty" id="emptyMsg">왼쪽에 입력하고 "문구 생성"을 누르면 여기 4채널 결과가 표시됩니다.</p>
+
+          <article class="card" data-c="instagram">
+            <div class="card-head"><h3>인스타그램</h3><span class="badge auto">자동</span></div>
+            <div class="card-body"></div>
+            <div class="tags"></div>
+            <div class="card-foot"><button class="primary" onclick="handlePublish('instagram')">발행</button><span class="note">검토 후 바로 발행</span></div>
+          </article>
+
+          <article class="card" data-c="threads">
+            <div class="card-head"><h3>스레드</h3><span class="badge auto">자동</span></div>
+            <div class="card-body"></div>
+            <div class="tags"></div>
+            <div class="card-foot"><button class="primary" onclick="handlePublish('threads')">발행</button><span class="note">검토 후 바로 발행</span></div>
+          </article>
+
+          <article class="card" data-c="naverBlog">
+            <div class="card-head"><h3>네이버 블로그</h3><span class="badge semi">반자동</span></div>
+            <div class="card-body"></div>
+            <div class="card-foot"><button class="copy" onclick="handleCopy('naverBlog')">복사</button><span class="note">복사해서 붙여넣기</span></div>
+          </article>
+
+          <article class="card" data-c="fridgeMagazine">
+            <div class="card-head"><h3>프릿지 매거진</h3><span class="badge semi">반자동</span></div>
+            <div class="card-body"></div>
+            <div class="card-foot"><button class="copy" onclick="handleCopy('fridgeMagazine')">복사</button><span class="note">복사해서 붙여넣기</span></div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var state = { channels: null, historyId: null, imageDataUrl: null };
+
+    function setStatus(msg, isError) {
+      var el = document.getElementById('status');
+      el.textContent = msg || '';
+      el.classList.toggle('error', !!isError);
+    }
+
+    document.getElementById('imageFile').addEventListener('change', function (e) {
+      var file = e.target.files[0];
+      if (!file) { state.imageDataUrl = null; return; }
+      var reader = new FileReader();
+      reader.onload = function () { state.imageDataUrl = reader.result; };
+      reader.readAsDataURL(file);
+    });
+
+    function handleGenerate() {
+      var input = {
+        contentType: document.getElementById('contentType').value,
+        targetBrand: document.getElementById('targetBrand').value.trim(),
+        coreMessage: document.getElementById('coreMessage').value.trim(),
+        productUrl: document.getElementById('productUrl').value.trim() || undefined
+      };
+      if (!input.targetBrand || !input.coreMessage) {
+        setStatus('대상 브랜드/상품과 핵심 메시지를 입력해주세요.', true);
+        return;
+      }
+
+      document.getElementById('generateBtn').disabled = true;
+      setStatus('생성 중입니다... (몇 초 걸릴 수 있습니다)');
+
+      google.script.run
+        .withSuccessHandler(onGenerateSuccess)
+        .withFailureHandler(onFailure)
+        .generateContent(input);
+    }
+
+    function onGenerateSuccess(data) {
+      document.getElementById('generateBtn').disabled = false;
+      state.channels = data.channels;
+      state.historyId = data.historyId;
+
+      document.getElementById('emptyMsg').style.display = 'none';
+
+      renderCard('instagram', formatShort(data.channels.instagram));
+      renderCard('threads', formatShort(data.channels.threads));
+      renderCard('naverBlog', formatLong(data.channels.naverBlog));
+      renderCard('fridgeMagazine', formatLong(data.channels.fridgeMagazine));
+
+      var note = '생성 완료. 검토 후 발행/복사하세요.';
+      if (data.productContext && !data.productContext.fetched) {
+        note += ' (상품 URL은 열람하지 못해 핵심 메시지만으로 작성됨)';
+      }
+      setStatus(note);
+    }
+
+    function formatShort(c) {
+      var hashtags = (c.hashtags || []).join(' ');
+      return c.caption + (hashtags ? '\n\n' + hashtags : '');
+    }
+    function formatLong(c) {
+      return (c.title ? c.title + '\n\n' : '') + (c.body || '');
+    }
+
+    function renderCard(channel, text) {
+      var card = document.querySelector('.card[data-c="' + channel + '"]');
+      card.classList.add('show');
+      card.querySelector('.card-body').textContent = text;
+    }
+
+    function getChannelText(channel) {
+      var card = document.querySelector('.card[data-c="' + channel + '"] .card-body');
+      return card ? card.textContent : '';
+    }
+
+    function handleCopy(channel) {
+      var text = getChannelText(channel);
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); setStatus(channel + ' 내용이 복사되었습니다.'); }
+      catch (e) { setStatus('복사에 실패했습니다. 직접 선택해 복사해주세요.', true); }
+      document.body.removeChild(ta);
+    }
+
+    function handlePublish(channel) {
+      if (!state.historyId) { setStatus('먼저 문구를 생성해주세요.', true); return; }
+      if (!state.imageDataUrl) { alert('발행하려면 먼저 이미지를 업로드해주세요.'); return; }
+      if (!confirm(channel + '에 지금 바로 발행하시겠습니까?')) return;
+
+      var caption = getChannelText(channel);
+      setStatus(channel + ' 발행 중입니다...');
+
+      google.script.run
+        .withSuccessHandler(function (res) {
+          setStatus(channel + ' 발행 완료! (게시물 ID: ' + res.postId + ')');
+        })
+        .withFailureHandler(onFailure)
+        .publishChannel(state.historyId, channel, state.imageDataUrl, caption);
+    }
+
+    function onFailure(error) {
+      document.getElementById('generateBtn').disabled = false;
+      setStatus('오류: ' + error.message, true);
+    }
+  </script>
+</body>
+</html>
