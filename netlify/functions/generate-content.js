@@ -123,6 +123,50 @@ function extractJson(text) {
   return JSON.parse(trimmed);
 }
 
+// 채널별 글자수 상한 (질의서 검토결과 4번 — "채널별 글자수와 해시태그 규격에 맞게 변환").
+// 모델이 지시를 어기고 더 길게 쓰는 경우를 대비한 서버 쪽 안전장치.
+var CHAR_LIMITS = {
+  instagram: 300,
+  threads: 300,
+  naverBlog: 2000,
+  fridgeMagazine: 900
+};
+
+function clip(text, max) {
+  if (typeof text !== 'string') return '';
+  if (text.length <= max) return text;
+  return text.slice(0, max - 1).trim() + '…';
+}
+
+// 모델 응답이 요청한 4개 채널 구조를 항상 지킨다는 보장이 없으므로, 누락된 필드는 빈 값으로
+// 채우고 길이를 강제한 뒤 프런트로 넘깁니다 — 화면이 undefined로 깨지는 걸 방지.
+function normalizeChannels(raw) {
+  raw = raw || {};
+  var ig = raw.instagram || {};
+  var th = raw.threads || {};
+  var nb = raw.naverBlog || {};
+  var fm = raw.fridgeMagazine || {};
+
+  return {
+    instagram: {
+      caption: clip(ig.caption || '', CHAR_LIMITS.instagram),
+      hashtags: Array.isArray(ig.hashtags) ? ig.hashtags.slice(0, 15) : []
+    },
+    threads: {
+      caption: clip(th.caption || '', CHAR_LIMITS.threads),
+      hashtags: Array.isArray(th.hashtags) ? th.hashtags.slice(0, 10) : []
+    },
+    naverBlog: {
+      title: clip(nb.title || '', 60),
+      body: clip(nb.body || '', CHAR_LIMITS.naverBlog)
+    },
+    fridgeMagazine: {
+      title: clip(fm.title || '', 60),
+      body: clip(fm.body || '', CHAR_LIMITS.fridgeMagazine)
+    }
+  };
+}
+
 exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') {
     return shared.json(405, { ok: false, error: 'method_not_allowed' });
@@ -179,7 +223,7 @@ exports.handler = async function (event) {
       return shared.json(502, { ok: false, error: 'invalid_json_from_model', raw: text });
     }
 
-    var responseBody = { ok: true, channels: channels };
+    var responseBody = { ok: true, channels: normalizeChannels(channels) };
     if (productContext) {
       responseBody.productContext = { fetched: productContext.fetched, reason: productContext.reason };
     }
