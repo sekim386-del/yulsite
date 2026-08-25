@@ -194,9 +194,32 @@
       font-size: 13.5px; font-family: inherit; background: var(--paper-sunken); color: var(--ink);
       transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
     }
-    input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--accent); background: var(--paper); box-shadow: 0 0 0 3px var(--accent-tint); }
+    input[type="text"]:focus, input[type="number"]:focus, textarea:focus { outline: none; border-color: var(--accent); background: var(--paper); box-shadow: 0 0 0 3px var(--accent-tint); }
     input[type="text"]::placeholder, textarea::placeholder { color: var(--ink-faint); }
+    input[type="number"] {
+      width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+      font-size: 13.5px; font-family: inherit; background: var(--paper-sunken); color: var(--ink);
+      transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+    }
     textarea { min-height: 64px; resize: vertical; }
+
+    .example-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .chip {
+      font-family: inherit; font-size: 11px; font-weight: 600; color: var(--accent-deep);
+      background: var(--olive-soft); border: 1px solid #cdeac6; border-radius: 999px;
+      padding: 5px 11px; cursor: pointer; transition: all .15s ease;
+    }
+    .chip:hover { background: #d3f2cd; }
+
+    .radio-row { display: flex; gap: 14px; align-items: center; height: 42px; }
+    .radio-opt { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--ink); cursor: pointer; }
+    .radio-opt input { accent-color: var(--accent-deep); width: 15px; height: 15px; cursor: pointer; }
+
+    .selected-items { display: flex; flex-wrap: wrap; gap: 6px; margin: -6px 0 14px; }
+    .selected-items .sel-chip {
+      font-size: 11.5px; font-weight: 600; color: var(--accent-deep); background: var(--olive-soft);
+      border-radius: 999px; padding: 4px 11px;
+    }
 
     /* ---------- 채널 탭 ---------- */
     .chan-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -343,49 +366,42 @@
 
           <div class="panel">
             <div class="panel-title"><span class="step-num">2</span>콘텐츠 조건 입력</div>
-            <div class="grid2">
-              <div class="field">
-                <label>콘텐츠 유형 <span class="field-hint">직접 입력 또는 목록에서 선택</span></label>
-                <input type="text" id="contentType" list="contentTypeList" placeholder="예: 입점사 소개" autocomplete="off">
-                <datalist id="contentTypeList">
-                  <option value="입점사 소개">
-                  <option value="신상품 소개">
-                  <option value="프로모션/할인 안내">
-                  <option value="시즌/이벤트 콘텐츠">
-                  <option value="ESG 스토리">
-                  <option value="고객 후기/리뷰">
-                </datalist>
-              </div>
-              <div class="field">
-                <label>대상 (브랜드/상품/프로그램) <span class="field-hint">직접 입력 또는 목록에서 선택</span></label>
-                <input type="text" id="targetBrand" list="targetBrandList" placeholder="예: ○○공방" autocomplete="off">
-                <datalist id="targetBrandList"></datalist>
-              </div>
-            </div>
             <div class="field">
-              <label>핵심 메시지</label>
-              <input type="text" id="coreMessage" placeholder="예: 지역 재료로 만든 친환경 제품">
+              <label>콘텐츠 주제</label>
+              <input type="text" id="topic" placeholder="예: 30대 직장인 여성에게 선물하기 좋은 여름철 선물">
+              <div class="example-chips">
+                <button type="button" class="chip" data-fill="30대 직장인 여성에게 선물하기 좋은 여름철 선물">30대 직장인 여성 여름 선물</button>
+                <button type="button" class="chip" data-fill="플라스틱 없이 시작하는 제로웨이스트 라이프">제로웨이스트 라이프</button>
+                <button type="button" class="chip" data-fill="회사 워크숍에서 진행하기 좋은 ESG 체험 프로그램">회사 워크숍 ESG 체험</button>
+              </div>
             </div>
             <div class="grid2">
               <div class="field">
-                <label>분위기 <span class="field-hint">직접 입력 또는 목록에서 선택</span></label>
-                <input type="text" id="tone" list="toneList" placeholder="예: 따뜻하고 담백하게" autocomplete="off">
-                <datalist id="toneList">
-                  <option value="따뜻하고 담백하게">
-                  <option value="발랄하고 경쾌하게">
-                  <option value="차분하고 신뢰감 있게">
-                  <option value="친근하고 캐주얼하게">
-                  <option value="정중하고 격식있게">
-                </datalist>
+                <label>소개할 개수</label>
+                <input type="number" id="itemCount" min="1" max="5" value="1">
               </div>
               <div class="field">
-                <label>메모 (선택)</label>
-                <input type="text" id="memo" placeholder="추가로 반영할 내용">
+                <label>유형</label>
+                <div class="radio-row">
+                  <label class="radio-opt"><input type="radio" name="itemType" value="product" checked> 상품</label>
+                  <label class="radio-opt"><input type="radio" name="itemType" value="program"> 프로그램</label>
+                </div>
               </div>
             </div>
             <div class="field">
-              <label>참고 상품 URL (선택)</label>
-              <input type="text" id="productUrl" placeholder="https://f-ridge.com/products/...">
+              <label>분위기 <span class="field-hint">직접 입력 또는 목록에서 선택</span></label>
+              <input type="text" id="tone" list="toneList" placeholder="예: 따뜻하고 담백하게" autocomplete="off">
+              <datalist id="toneList">
+                <option value="따뜻하고 담백하게">
+                <option value="발랄하고 경쾌하게">
+                <option value="차분하고 신뢰감 있게">
+                <option value="친근하고 캐주얼하게">
+                <option value="정중하고 격식있게">
+              </datalist>
+            </div>
+            <div class="field">
+              <label>그 외 추가 반영사항 <span class="field-hint">선택사항</span></label>
+              <input type="text" id="extraNotes" placeholder="추가로 반영할 내용이 있으면 적어주세요">
             </div>
           </div>
 
@@ -406,6 +422,8 @@
 
             <p class="empty" id="emptyMsg">조건을 입력하고 "문구 생성"을 누르면 여기 결과가 표시됩니다.</p>
 
+            <div class="selected-items" id="selectedItems"></div>
+
             <div class="result-card" data-c="instagram">
               <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요)</span></p>
               <textarea class="result-body" data-limit="300" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
@@ -425,17 +443,19 @@
               </div>
             </div>
             <div class="result-card" data-c="naverBlog">
-              <p class="field-label">본문 <span class="muted">(확인 후 수정하세요)</span></p>
-              <textarea class="result-body" data-limit="2000" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
+              <p class="field-label">본문 <span class="muted">(공백 제외 2000자 이상 · 확인 후 수정하세요)</span></p>
+              <textarea class="result-body" data-limit="4000" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
               <div class="result-foot">
                 <button class="copy" data-action="copy">복사</button>
                 <span class="note">복사해서 붙여넣기</span>
-                <span class="char-count" data-limit="2000">0 / 2000자</span>
+                <span class="char-count" data-limit="4000">0 / 4000자</span>
               </div>
             </div>
             <div class="result-card" data-c="fridgeMagazine">
               <p class="field-label">본문 <span class="muted">(확인 후 수정하세요)</span></p>
               <textarea class="result-body" data-limit="900" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
+              <p class="field-label" style="margin-top:10px;">SEO 키워드 <span class="muted">(콤마로 구분 · 확인 후 수정하세요)</span></p>
+              <input type="text" class="result-keywords" placeholder="문구를 생성하면 채워집니다." style="margin-bottom:12px;">
               <div class="result-foot">
                 <button class="copy" data-action="copy">복사</button>
                 <span class="note">복사해서 붙여넣기</span>
@@ -567,17 +587,29 @@
     }
 
     // ---------- 문구 생성 ----------
+    // ---------- 주제 예시 칩 ----------
+    document.querySelectorAll('.chip').forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        document.getElementById('topic').value = chip.dataset.fill;
+        saveDraft();
+      });
+    });
+
+    function getItemType() {
+      var checked = document.querySelector('input[name="itemType"]:checked');
+      return checked ? checked.value : 'product';
+    }
+
     document.getElementById('generateBtn').addEventListener('click', function () {
       var input = {
-        contentType: document.getElementById('contentType').value.trim(),
-        targetBrand: document.getElementById('targetBrand').value.trim(),
-        coreMessage: document.getElementById('coreMessage').value.trim(),
+        topic: document.getElementById('topic').value.trim(),
+        itemCount: Number(document.getElementById('itemCount').value) || 1,
+        itemType: getItemType(),
         tone: document.getElementById('tone').value.trim() || undefined,
-        memo: document.getElementById('memo').value.trim() || undefined,
-        productUrl: document.getElementById('productUrl').value.trim() || undefined
+        extraNotes: document.getElementById('extraNotes').value.trim() || undefined
       };
-      if (!input.targetBrand || !input.coreMessage) {
-        setStatus('대상과 핵심 메시지를 입력해주세요.', true);
+      if (!input.topic) {
+        setStatus('콘텐츠 주제를 입력해주세요.', true);
         return;
       }
 
@@ -609,6 +641,8 @@
       renderResult('threads', formatShort(data.channels.threads));
       renderResult('naverBlog', formatLong(data.channels.naverBlog));
       renderResult('fridgeMagazine', formatLong(data.channels.fridgeMagazine));
+      renderKeywords(data.channels.fridgeMagazine.keywords);
+      renderSelectedItems(data.channels.selectedItems);
 
       document.querySelectorAll('.result-card').forEach(function (c) {
         c.classList.toggle('show', c.dataset.c === state.activeChannel);
@@ -617,8 +651,8 @@
       updateStats();
 
       var note = '생성 완료. 검토 후 발행/복사하세요.';
-      if (data.productContext && !data.productContext.fetched) {
-        note += ' (상품 URL은 열람하지 못해 핵심 메시지만으로 작성됨)';
+      if (data.listing && !data.listing.fetched) {
+        note += ' (상품/프로그램 목록을 가져오지 못해 구체적 상품명 없이 작성됨)';
       }
       setStatus(note);
       loadHistory();
@@ -636,6 +670,19 @@
       var card = document.querySelector('.result-card[data-c="' + channel + '"] .result-body');
       card.value = text;
       updateCharCount(channel);
+    }
+
+    function renderKeywords(keywords) {
+      var el = document.querySelector('.result-card[data-c="fridgeMagazine"] .result-keywords');
+      if (el) el.value = (keywords || []).join(', ');
+    }
+
+    function renderSelectedItems(items) {
+      var wrap = document.getElementById('selectedItems');
+      if (!items || !items.length) { wrap.innerHTML = ''; return; }
+      wrap.innerHTML = 'AI가 고른 항목: ' + items.map(function (it) {
+        return '<span class="sel-chip">' + escapeHtml(it.name) + '</span>';
+      }).join('');
     }
 
     // ---------- 글자수 카운터 ----------
@@ -657,8 +704,12 @@
     });
 
     function getChannelText(channel) {
-      var el = document.querySelector('.result-card[data-c="' + channel + '"] .result-body');
-      return el ? el.value : '';
+      var card = document.querySelector('.result-card[data-c="' + channel + '"]');
+      if (!card) return '';
+      var text = card.querySelector('.result-body').value;
+      var kwEl = card.querySelector('.result-keywords');
+      if (kwEl && kwEl.value.trim()) text += '\n\nSEO 키워드: ' + kwEl.value.trim();
+      return text;
     }
 
     // ---------- 발행 / 복사 ----------
@@ -739,9 +790,11 @@
     // ---------- 새 콘텐츠 시작 (초기화) ----------
     document.getElementById('resetBtn').addEventListener('click', function () {
       if (!confirm('입력한 내용과 결과를 모두 지우고 새로 시작할까요?')) return;
-      ['contentType', 'targetBrand', 'coreMessage', 'tone', 'memo', 'productUrl'].forEach(function (id) {
+      ['topic', 'tone', 'extraNotes'].forEach(function (id) {
         document.getElementById(id).value = '';
       });
+      document.getElementById('itemCount').value = 1;
+      document.querySelector('input[name="itemType"][value="product"]').checked = true;
       state.photos = [];
       state.channels = null;
       state.historyId = null;
@@ -749,6 +802,8 @@
       state.copied = {};
       renderPhotos();
       document.querySelectorAll('.result-body').forEach(function (ta) { ta.value = ''; });
+      document.querySelectorAll('.result-keywords').forEach(function (el) { el.value = ''; });
+      document.getElementById('selectedItems').innerHTML = '';
       document.querySelectorAll('.result-card').forEach(function (c) { c.classList.remove('show'); });
       document.getElementById('emptyMsg').style.display = '';
       setStatus('');
@@ -757,12 +812,13 @@
     });
 
     // ---------- 임시 저장 (새로고침해도 입력값 유지) ----------
-    var DRAFT_KEY = 'yulsite_osmu_draft_v1';
-    var DRAFT_FIELDS = ['contentType', 'targetBrand', 'coreMessage', 'tone', 'memo', 'productUrl'];
+    var DRAFT_KEY = 'yulsite_osmu_draft_v2';
+    var DRAFT_FIELDS = ['topic', 'itemCount', 'tone', 'extraNotes'];
     function saveDraft() {
       try {
         var draft = {};
         DRAFT_FIELDS.forEach(function (id) { draft[id] = document.getElementById(id).value; });
+        draft.itemType = getItemType();
         localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
       } catch (e) { /* localStorage 사용 불가 시 조용히 무시 */ }
     }
@@ -774,10 +830,17 @@
         DRAFT_FIELDS.forEach(function (id) {
           if (draft[id]) document.getElementById(id).value = draft[id];
         });
+        if (draft.itemType) {
+          var radio = document.querySelector('input[name="itemType"][value="' + draft.itemType + '"]');
+          if (radio) radio.checked = true;
+        }
       } catch (e) { /* 무시 */ }
     }
     DRAFT_FIELDS.forEach(function (id) {
       document.getElementById(id).addEventListener('input', saveDraft);
+    });
+    document.querySelectorAll('input[name="itemType"]').forEach(function (r) {
+      r.addEventListener('change', saveDraft);
     });
 
     restoreDraft();

@@ -79,77 +79,109 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
+var PRODUCT_LIST_URLS_ = {
+  product: 'https://f-ridge.com/shop-all',
+  program: 'https://f-ridge.com/program-all'
+};
+
 /**
- * 상품 URL을 직접 열람(크롤링)해 본문 텍스트를 추출합니다.
- * 실패해도 예외를 던지지 않고 { fetched:false, reason } 으로 알려주기만 합니다.
+ * 상품/프로그램 목록 페이지를 크롤링해 "이름 : 링크" 후보 목록을 추출합니다.
+ * 사이트가 자바스크립트로 목록을 그리는 구조면 후보를 거의 못 찾을 수 있는데,
+ * 그 경우엔 빈 배열을 반환해서 buildPrompt_가 "지어내지 말라"는 안전 문구를 쓰게 합니다.
  */
-function fetchProductContext_(productUrl) {
+function fetchListingLinks_(itemType) {
+  var url = PRODUCT_LIST_URLS_[itemType] || PRODUCT_LIST_URLS_.product;
   try {
-    var res = UrlFetchApp.fetch(productUrl, {
+    var res = UrlFetchApp.fetch(url, {
       muteHttpExceptions: true,
       followRedirects: true,
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; YulsiteContentBot/1.0)' }
     });
-    if (res.getResponseCode() !== 200) {
-      return { fetched: false, reason: 'http_' + res.getResponseCode() };
-    }
+    if (res.getResponseCode() !== 200) return { fetched: false, reason: 'http_' + res.getResponseCode(), items: [] };
+
     var html = res.getContentText();
-    var text = html
-      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-      .replace(/<!--[\s\S]*?-->/g, ' ')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 4000);
-    if (!text) return { fetched: false, reason: 'empty_page' };
-    return { fetched: true, text: text };
+    var items = [];
+    var seen = {};
+    var re = /<a\s+[^>]*href=["']([^"'#][^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    var m;
+    while ((m = re.exec(html)) !== null && items.length < 60) {
+      var href = m[1];
+      var text = m[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!text || text.length < 2 || text.length > 60) continue;
+      if (/^(javascript:|mailto:|tel:)/i.test(href)) continue;
+      if (href.indexOf('http') !== 0) {
+        href = url.replace(/\/$/, '') + '/' + href.replace(/^\//, '');
+      }
+      var key = text + '|' + href;
+      if (seen[key]) continue;
+      seen[key] = true;
+      items.push({ text: text, url: href });
+    }
+    if (!items.length) return { fetched: false, reason: 'no_links_found', items: [] };
+    return { fetched: true, items: items };
   } catch (e) {
-    return { fetched: false, reason: 'fetch_failed' };
+    return { fetched: false, reason: 'fetch_failed', items: [] };
   }
 }
 
-function buildPrompt_(input, rules, productContext) {
+function buildPrompt_(input, rules, listing) {
+  var itemTypeLabel = input.itemType === 'program' ? '프로그램' : '상품';
+  var itemCount = Number(input.itemCount) > 0 ? Number(input.itemCount) : 1;
+
   var lines = [
-    '당신은 "' + (rules.Persona || 'ESG 상품 큐레이션 플랫폼 프릿지의 SNS 마케터') + '"입니다.',
+    '당신은 ESG 쇼핑 플랫폼 "프릿지"(f-ridge.com)의 마케팅 전문가입니다.',
     '항상 자연스러운 한국어로만 답변하세요. 영어나 다른 언어를 섞지 마세요.',
     '주요 키워드(가능하면 자연스럽게 반영): ' + (rules.Keywords || '없음'),
     '금지어(절대 사용 금지): ' + (rules.Prohibited_Words || '없음'),
     '',
-    '아래 4개 채널용 문구를 각각 작성하고, 반드시 아래 JSON 형식 하나로만 답변하세요.',
-    '설명, 코드블록 표시(```json 등), 그 외 텍스트를 절대 덧붙이지 마세요.',
-    '{',
-    '  "instagram": { "caption": "짧게 끊어 쓴 문구", "hashtags": ["#해시태그1", "#해시태그2"] },',
-    '  "threads": { "caption": "짧게 끊어 쓴 문구", "hashtags": ["#해시태그1", "#해시태그2"] },',
-    '  "naverBlog": { "title": "SEO를 고려한 제목", "body": "검색 유입을 고려해 풀어 쓴 본문" },',
-    '  "fridgeMagazine": { "title": "매거진 제목", "body": "매거진 본문" }',
-    '}',
-    '인스타그램·스레드는 300자 이내, 네이버 블로그와 프릿지 매거진은 600~900자 내외로 써주세요.',
-    '',
-    '콘텐츠 유형: ' + input.contentType,
-    '대상 브랜드/상품: ' + input.targetBrand,
-    '핵심 메시지: ' + input.coreMessage
+    '[콘텐츠 주제] ' + input.topic,
+    '[소개할 개수] ' + itemCount + '개',
+    '[유형] ' + itemTypeLabel
   ];
-  if (input.tone) {
-    lines.push('분위기/톤: ' + input.tone);
+  if (input.extraNotes) lines.push('[그 외 추가 반영사항] ' + input.extraNotes);
+  if (input.tone) lines.push('[분위기/톤] ' + input.tone);
+  lines.push('');
+
+  if (listing && listing.fetched && listing.items.length) {
+    lines.push('아래는 f-ridge.com ' + itemTypeLabel + ' 목록 페이지에서 가져온 후보 목록입니다 (이름 : 링크):');
+    listing.items.forEach(function (it) { lines.push('- ' + it.text + ' : ' + it.url); });
+    lines.push('위 후보 중에서 주제에 가장 잘 맞는 것을 정확히 ' + itemCount + '개 골라 selectedItems에 넣고, 아래 콘텐츠 본문에도 반영하세요.');
+    lines.push('반드시 후보 목록에 실제로 있는 이름과 링크만 사용하고, 없는 상품명을 지어내지 마세요.');
+  } else {
+    lines.push('(상품/프로그램 목록 페이지를 열람하지 못했습니다. selectedItems는 빈 배열로 두고, 실제로 존재하는지 알 수 없는 구체적 상품명을 지어내지 말고 "이런 ' + itemTypeLabel + '" 처럼 일반적으로 표현하세요.)');
   }
-  if (input.memo) {
-    lines.push('추가로 반영할 메모: ' + input.memo);
-  }
-  if (input.productUrl) {
-    lines.push('참고 상품 URL: ' + input.productUrl);
-    if (productContext && productContext.fetched) {
-      lines.push('상품 페이지에서 확인한 내용(참고용, 과장/오류 없이 반영):');
-      lines.push(productContext.text);
-    } else {
-      lines.push('(상품 페이지를 직접 열람하지 못했습니다 — 위 핵심 메시지만으로 작성해주세요.)');
-    }
-  }
+  lines.push('');
+  lines.push('반드시 아래 JSON 형식 하나로만 답변하세요. 설명, 코드블록 표시(```json 등), 그 외 텍스트를 절대 덧붙이지 마세요.');
+  lines.push('{');
+  lines.push('  "selectedItems": [{"name": "...", "url": "..."}],');
+  lines.push('  "instagram": { "caption": "짧게 끊어 쓴 문구", "hashtags": ["#해시태그1", "#해시태그2"] },');
+  lines.push('  "threads": { "caption": "짧게 끊어 쓴 문구", "hashtags": ["#해시태그1", "#해시태그2"] },');
+  lines.push('  "naverBlog": { "title": "SEO를 고려한 제목", "body": "아래 [naverBlog.body 작성 규칙]을 지켜 작성한 본문" },');
+  lines.push('  "fridgeMagazine": { "title": "매거진 제목", "body": "매거진 본문", "keywords": ["SEO 키워드1", "SEO 키워드2"] }');
+  lines.push('}');
+  lines.push('인스타그램·스레드는 300자 이내 짧은 문구로 작성하세요.');
+  lines.push('');
+  lines.push('=== naverBlog.body 작성 규칙 (매우 중요, 반드시 모두 지킬 것) ===');
+  lines.push('이 상품(프로그램)의 판매·참여 증대를 목표로 구매욕을 자극하는 블로그 글을 쓴다. SEO, AEO, GEO를 고려해 네이버·구글·AI 검색에서 상위노출/추천될 수 있게 작성한다.');
+  lines.push('1. 네이버 검색 상위노출을 고려한 키워드로 naverBlog.title(제목)을 작성할 것.');
+  lines.push('2. naverBlog.body는 공백 제외 2000자 이상으로 작성할 것.');
+  lines.push('3. 말투: 친근하고 친절한 반말로 쓰되, 무례하게 느껴지는 "야", "너"라는 표현은 쓰지 말 것.');
+  lines.push('4. naverBlog.body의 첫 문장은 반드시 정확히 "찌-하! 오늘도 가치소비 하고 이찌?" 로 시작할 것.');
+  lines.push('5. 이 상품을 쓰지 않을 때의 문제의식을 제기하고, 계속 해결되지 않을 거란 암시를 준 뒤, 이 상품을 해결책으로 자연스럽게 제시할 것.');
+  lines.push('6. 이 상품이 고객에게 왜 도움이 되는지, 구매/사용 시 이점을 설명할 것.');
+  lines.push('7. 이 상품/브랜드가 많이 팔릴수록 사회적으로 어떤 선한 영향력을 미치는지 어필할 것.');
+  lines.push('8. 어떤 사람이 쓰면 좋을지, 누구에게 선물하면 좋을지 추천할 것.');
+  lines.push('9. 개인이 직접 쓰거나 소중한 사람에게 선물하기에도 좋고, 기업·기관이 대량구매하기에도 좋은 상품임을 함께 어필할 것.');
+  lines.push('10. 프릿지 소개와 함께, 왜 이 상품을 프릿지에서 사야 하는지, 일반 쇼핑몰과의 차별점, ESG 브랜드만 입점시키는 까다로운 심사를 통과한 프릿지의 공식 파트너사라는 점을 어필할 것.');
+  lines.push('11. 세일즈 퍼널 흐름으로 자연스럽게 전개하고, selectedItems의 url을 본문 맥락에 자연스럽게 바로가기 링크로 삽입할 것.');
+  lines.push('12. 모바일 가독성을 위해 문장 자체를 줄이지 말고, 약 15자 내외 단위로 줄바꿈(엔터) 처리할 것.');
+  lines.push('13. 글 마지막에 해시태그를 작성할 것.');
+  lines.push('14. 제목을 누락하지 말고 SEO/AEO/GEO를 고려해 작성할 것.');
+  lines.push('너무 딱딱하지 않게, 대화하듯 자연스러운 서술형 문장을 정리된 요약투보다 더 많이 써서 작성할 것.');
   return lines.join('\n');
 }
 
-var CHAR_LIMITS_ = { instagram: 300, threads: 300, naverBlog: 2000, fridgeMagazine: 900 };
+var CHAR_LIMITS_ = { instagram: 300, threads: 300, naverBlog: 4000, fridgeMagazine: 900 };
 
 function clip_(text, max) {
   if (typeof text !== 'string') return '';
@@ -159,26 +191,33 @@ function clip_(text, max) {
 function normalizeChannels_(raw) {
   raw = raw || {};
   var ig = raw.instagram || {}, th = raw.threads || {}, nb = raw.naverBlog || {}, fm = raw.fridgeMagazine || {};
+  var selectedItems = Array.isArray(raw.selectedItems) ? raw.selectedItems.slice(0, 5).map(function (it) {
+    return { name: String((it && it.name) || ''), url: String((it && it.url) || '') };
+  }) : [];
   return {
+    selectedItems: selectedItems,
     instagram: { caption: clip_(ig.caption || '', CHAR_LIMITS_.instagram), hashtags: Array.isArray(ig.hashtags) ? ig.hashtags.slice(0, 15) : [] },
     threads: { caption: clip_(th.caption || '', CHAR_LIMITS_.threads), hashtags: Array.isArray(th.hashtags) ? th.hashtags.slice(0, 10) : [] },
-    naverBlog: { title: clip_(nb.title || '', 60), body: clip_(nb.body || '', CHAR_LIMITS_.naverBlog) },
-    fridgeMagazine: { title: clip_(fm.title || '', 60), body: clip_(fm.body || '', CHAR_LIMITS_.fridgeMagazine) }
+    naverBlog: { title: clip_(nb.title || '', 80), body: clip_(nb.body || '', CHAR_LIMITS_.naverBlog) },
+    fridgeMagazine: {
+      title: clip_(fm.title || '', 60),
+      body: clip_(fm.body || '', CHAR_LIMITS_.fridgeMagazine),
+      keywords: Array.isArray(fm.keywords) ? fm.keywords.slice(0, 10).map(String) : []
+    }
   };
 }
 
 /**
  * 프런트에서 호출하는 메인 함수 — 1번의 입력으로 4채널 콘텐츠를 생성합니다.
- * input: { contentType, targetBrand, coreMessage, productUrl }
+ * input: { topic, itemCount, itemType ('product'|'program'), extraNotes, tone }
  */
 function generateContent(input) {
   var apiKey = requireProp_('GEMINI_API_KEY', 'Gemini API 키');
   var rules = loadBrandRules_();
 
-  var productContext = null;
-  if (input.productUrl) productContext = fetchProductContext_(input.productUrl);
+  var listing = fetchListingLinks_(input.itemType);
 
-  var prompt = buildPrompt_(input, rules, productContext);
+  var prompt = buildPrompt_(input, rules, listing);
   var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(apiKey);
 
   var res = UrlFetchApp.fetch(url, {
@@ -206,7 +245,7 @@ function generateContent(input) {
   }
 
   var historyId = saveContentHistory(input, channels);
-  return { channels: channels, productContext: productContext, historyId: historyId };
+  return { channels: channels, listing: { fetched: listing.fetched, reason: listing.reason || null }, historyId: historyId };
 }
 
 /** Content_History 탭에 결과를 기록합니다. */
@@ -215,9 +254,10 @@ function saveContentHistory(input, channels) {
   var sheet = ss.getSheetByName('Content_History');
   if (!sheet) { setupSheets(); sheet = ss.getSheetByName('Content_History'); }
 
+  var itemTypeLabel = input.itemType === 'program' ? '프로그램' : '상품';
   var id = 'YUL_' + new Date().getTime();
   sheet.appendRow([
-    id, new Date(), input.contentType, input.targetBrand, input.coreMessage,
+    id, new Date(), itemTypeLabel + ' ' + (input.itemCount || 1) + '개', input.topic, input.extraNotes || '',
     JSON.stringify(channels.instagram), JSON.stringify(channels.threads),
     JSON.stringify(channels.naverBlog), JSON.stringify(channels.fridgeMagazine),
     '대기'
