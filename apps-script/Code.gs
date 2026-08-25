@@ -39,8 +39,8 @@ function setupSheets() {
   if (!rules) {
     rules = ss.insertSheet('Brand_Rules');
     rules.appendRow(['항목', '값']);
-    rules.appendRow(['Persona', 'ESG 상품 큐레이션 플랫폼 프릿지의 SNS 마케터']);
-    rules.appendRow(['Keywords', 'ESG, 지속가능, 업사이클링, 친환경']);
+    rules.appendRow(['Persona', '친환경·제로웨이스트·업사이클·비건·동물복지 브랜드를 소개하는 ESG 가치소비 플랫폼 프릿지의 마케터']);
+    rules.appendRow(['Keywords', '친환경, 제로웨이스트, 업사이클, 비건, 동물복지, 가치소비, 지속가능']);
     rules.appendRow(['Prohibited_Words', '없음']);
     rules.setFrozenRows(1);
   }
@@ -128,8 +128,9 @@ function buildPrompt_(input, rules, listing) {
   var itemTypeLabel = input.itemType === 'program' ? '프로그램' : '상품';
   var itemCount = Number(input.itemCount) > 0 ? Number(input.itemCount) : 1;
 
+  var persona = rules.Persona || '친환경·제로웨이스트·업사이클·비건·동물복지 브랜드를 소개하는 ESG 가치소비 플랫폼 프릿지의 마케터';
   var lines = [
-    '당신은 ESG 쇼핑 플랫폼 "프릿지"(f-ridge.com)의 마케팅 전문가입니다.',
+    '당신은 "' + persona + '"입니다. 소속 플랫폼은 프릿지(f-ridge.com)입니다.',
     '항상 자연스러운 한국어로만 답변하세요. 영어나 다른 언어를 섞지 마세요.',
     '주요 키워드(가능하면 자연스럽게 반영): ' + (rules.Keywords || '없음'),
     '금지어(절대 사용 금지): ' + (rules.Prohibited_Words || '없음'),
