@@ -9,77 +9,111 @@
   <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;600;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f6f7f0;
+      --bg: #fbfdf6;
       --paper: #ffffff;
-      --paper-sunken: #f2f6ea;
-      --ink: #14201a;
-      --ink-soft: #566253;
-      --ink-faint: #8a9284;
-      --line: #e2e9d3;
-      --line-soft: #edf1e4;
-      --forest: #1c8a50;
-      --forest-deep: #136a3d;
-      --forest-tint: rgba(28,138,80,.08);
-      --olive-soft: #e4f3da;
-      --gold: #c98a1e;
-      --gold-soft: #fdf0d6;
-      --danger: #c0402c;
-      --radius-lg: 16px;
-      --radius-md: 11px;
-      --radius-sm: 7px;
-      --shadow-sm: 0 1px 2px rgba(20,32,26,.05);
-      --shadow-md: 0 1px 2px rgba(20,32,26,.04), 0 10px 26px -14px rgba(20,32,26,.18);
-      --shadow-lg: 0 4px 10px rgba(20,32,26,.06), 0 20px 44px -20px rgba(20,32,26,.22);
+      --paper-sunken: #f5f9ee;
+      --ink: #16241d;
+      --ink-soft: #5c6b58;
+      --ink-faint: #97a390;
+      --line: #e9efdc;
+      --line-soft: #f1f5e8;
+      --accent: #17ad63;
+      --accent-deep: #0d8a4d;
+      --accent-bright: #4ade80;
+      --accent-tint: rgba(23,173,99,.09);
+      --olive-soft: #e3f7e0;
+      --gold: #dc9f24;
+      --gold-soft: #fdf1d3;
+      --danger: #d64545;
+      --radius-lg: 18px;
+      --radius-md: 12px;
+      --radius-sm: 8px;
+      --shadow-sm: 0 1px 3px rgba(22,36,29,.05);
+      --shadow-md: 0 2px 6px rgba(22,36,29,.05), 0 14px 30px -16px rgba(22,36,29,.16);
+      --shadow-lg: 0 6px 14px rgba(22,36,29,.06), 0 26px 54px -22px rgba(22,36,29,.22);
     }
     * { box-sizing: border-box; }
-    ::selection { background: var(--olive-soft); color: var(--forest-deep); }
+    ::selection { background: var(--olive-soft); color: var(--accent-deep); }
+    html, body { height: 100%; }
     body {
       font-family: "Noto Sans KR", -apple-system, "Malgun Gothic", sans-serif;
-      margin: 0; padding: 40px 20px 80px;
+      margin: 0; color: var(--ink); line-height: 1.55; -webkit-font-smoothing: antialiased;
       background:
-        radial-gradient(1100px 420px at 12% -8%, rgba(28,138,80,.07), transparent 60%),
-        radial-gradient(900px 360px at 100% 0%, rgba(201,138,30,.06), transparent 55%),
+        radial-gradient(1200px 480px at 8% -10%, rgba(74,222,128,.14), transparent 60%),
+        radial-gradient(900px 400px at 105% 0%, rgba(220,159,36,.10), transparent 55%),
         var(--bg);
-      color: var(--ink);
-      line-height: 1.55;
-      -webkit-font-smoothing: antialiased;
-    }
-    .container { max-width: 880px; margin: 0 auto; }
-
-    /* ---------- 헤더 ---------- */
-    header.page-head {
-      display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
-      margin-bottom: 28px; padding-bottom: 22px; border-bottom: 1px solid var(--line);
-    }
-    .eyebrow {
-      font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .1em;
-      text-transform: uppercase; color: var(--forest); margin: 0 0 8px; font-weight: 500;
-      display: flex; align-items: center; gap: 7px;
-    }
-    .eyebrow::before {
-      content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--forest);
-      box-shadow: 0 0 0 3px var(--forest-tint);
-    }
-    h1 {
-      font-family: "Gowun Batang", Georgia, serif; font-weight: 700;
-      font-size: 28px; color: var(--ink); margin: 0; letter-spacing: -.01em;
-    }
-    .head-sub { font-size: 12.5px; color: var(--ink-faint); margin: 6px 0 0; font-family: "Noto Sans KR", sans-serif; }
-    .brand-badge {
-      flex: none; font-family: "Gowun Batang", serif; font-size: 13px; font-weight: 700;
-      color: #fff; background: linear-gradient(135deg, var(--forest), var(--forest-deep));
-      padding: 9px 16px; border-radius: 999px; box-shadow: var(--shadow-md); letter-spacing: .02em;
     }
 
-    /* ---------- 상단 탭 ---------- */
-    .top-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
-    .top-tabs button {
-      font-family: inherit; font-size: 13px; font-weight: 700; padding: 11px 24px;
-      border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-soft);
+    /* ---------- 전체 레이아웃 ---------- */
+    .shell { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 236px; flex: none; padding: 28px 18px; display: flex; flex-direction: column;
+      border-right: 1px solid var(--line); background: rgba(255,255,255,.6); backdrop-filter: blur(6px);
+      position: sticky; top: 0; height: 100vh;
+    }
+    .brand { display: flex; align-items: center; gap: 11px; padding: 0 6px 24px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
+    .brand-mark {
+      width: 38px; height: 38px; border-radius: 11px; flex: none;
+      background: linear-gradient(135deg, var(--accent-bright), var(--accent-deep));
+      color: #fff; display: flex; align-items: center; justify-content: center;
+      font-family: "Gowun Batang", serif; font-weight: 700; font-size: 17px;
+      box-shadow: 0 8px 18px -8px rgba(13,138,77,.65);
+    }
+    .brand-name { font-family: "Gowun Batang", serif; font-weight: 700; font-size: 15.5px; margin: 0; color: var(--ink); }
+    .brand-caption { font-family: "JetBrains Mono", monospace; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); margin: 2px 0 0; }
+
+    .side-nav { display: flex; flex-direction: column; gap: 5px; }
+    .nav-btn {
+      display: flex; align-items: center; gap: 10px; text-align: left; width: 100%;
+      font-family: inherit; font-size: 13.5px; font-weight: 700; padding: 11px 13px;
+      border-radius: var(--radius-sm); border: 1px solid transparent; background: transparent; color: var(--ink-soft);
       cursor: pointer; transition: all .15s ease;
     }
-    .top-tabs button.active { background: var(--forest); border-color: var(--forest); color: #fff; box-shadow: var(--shadow-md); }
-    .top-tabs button:not(.active):hover { border-color: var(--forest); color: var(--forest); background: var(--forest-tint); }
+    .nav-btn .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--line); flex: none; transition: background .15s ease; }
+    .nav-btn:hover { background: var(--accent-tint); color: var(--accent-deep); }
+    .nav-btn.active { background: linear-gradient(135deg, var(--accent), var(--accent-deep)); color: #fff; box-shadow: var(--shadow-md); }
+    .nav-btn.active .dot { background: #fff; }
+
+    .side-foot { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--line); }
+    .side-foot p { font-size: 11px; color: var(--ink-faint); margin: 0; line-height: 1.6; }
+
+    .content { flex: 1; min-width: 0; padding: 34px 40px 80px; }
+    .content-inner { max-width: 760px; margin: 0 auto; }
+
+    @media (max-width: 820px) {
+      .shell { flex-direction: column; }
+      .sidebar { width: 100%; height: auto; position: relative; flex-direction: row; align-items: center; padding: 16px 18px; gap: 16px; }
+      .brand { border-bottom: none; padding: 0; margin: 0; }
+      .side-nav { flex-direction: row; }
+      .side-foot { display: none; }
+      .content { padding: 24px 18px 60px; }
+    }
+
+    /* ---------- 헤더 ---------- */
+    header.page-head { margin-bottom: 22px; }
+    .eyebrow {
+      font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--accent); margin: 0 0 8px; font-weight: 500;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-bright); box-shadow: 0 0 0 3px var(--accent-tint); }
+    h1 { font-family: "Gowun Batang", Georgia, serif; font-weight: 700; font-size: 27px; color: var(--ink); margin: 0; letter-spacing: -.01em; }
+    .head-sub { font-size: 12.5px; color: var(--ink-faint); margin: 7px 0 0; }
+
+    /* ---------- 대시보드 통계 스트립 ---------- */
+    .stats-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+    @media (max-width: 620px) { .stats-strip { grid-template-columns: 1fr 1fr; } }
+    .stat-card {
+      background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-md);
+      padding: 15px 16px; box-shadow: var(--shadow-sm); position: relative; overflow: hidden;
+    }
+    .stat-card::after {
+      content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: var(--stat-color, var(--accent));
+    }
+    .stat-label { font-size: 11px; color: var(--ink-faint); font-weight: 600; margin: 0 0 6px; }
+    .stat-value { font-family: "Gowun Batang", serif; font-size: 20px; font-weight: 700; color: var(--ink); margin: 0; }
+    .stat-value .unit { font-family: "Noto Sans KR", sans-serif; font-size: 12px; font-weight: 500; color: var(--ink-faint); margin-left: 2px; }
 
     /* ---------- 패널 공통 ---------- */
     .panel {
@@ -92,41 +126,32 @@
     }
     .step-num {
       width: 25px; height: 25px; border-radius: 50%;
-      background: linear-gradient(135deg, var(--forest), var(--forest-deep)); color: #fff;
+      background: linear-gradient(135deg, var(--accent-bright), var(--accent-deep)); color: #fff;
       display: inline-flex; align-items: center; justify-content: center; font-size: 12.5px; flex: none;
-      font-family: "Noto Sans KR", sans-serif; font-weight: 700; box-shadow: 0 3px 8px -2px rgba(19,106,61,.55);
+      font-family: "Noto Sans KR", sans-serif; font-weight: 700; box-shadow: 0 4px 10px -3px rgba(13,138,77,.6);
     }
     .panel-title .hint { font-weight: 400; font-size: 12px; color: var(--ink-faint); font-family: "Noto Sans KR", sans-serif; margin-left: 2px; }
 
     /* ---------- 사진 등록 ---------- */
     #dropZone {
-      border: 1.5px dashed #c7d6b8; border-radius: var(--radius-md); padding: 40px 20px; text-align: center;
+      border: 1.5px dashed #bfe0c4; border-radius: var(--radius-md); padding: 40px 20px; text-align: center;
       color: var(--ink-soft); font-size: 13px; cursor: pointer; background: var(--paper-sunken);
-      transition: all .15s ease; position: relative;
+      transition: all .15s ease;
     }
-    #dropZone::before {
-      content: '＋'; display: block; font-size: 22px; color: var(--forest); margin-bottom: 8px; font-weight: 300;
-    }
-    #dropZone:hover { border-color: var(--forest); background: var(--olive-soft); }
-    #dropZone.drag { background: var(--olive-soft); border-color: var(--forest); }
+    #dropZone::before { content: '＋'; display: block; font-size: 22px; color: var(--accent); margin-bottom: 8px; font-weight: 300; }
+    #dropZone:hover { border-color: var(--accent); background: var(--olive-soft); }
+    #dropZone.drag { background: var(--olive-soft); border-color: var(--accent); }
     #photoPreview { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
-    .thumb { position: relative; width: 84px; height: 84px; border-radius: 10px; overflow: hidden; border: 2px solid var(--line); box-shadow: var(--shadow-sm); }
-    .thumb.rep { border-color: var(--forest); box-shadow: 0 0 0 3px var(--forest-tint); }
+    .thumb { position: relative; width: 84px; height: 84px; border-radius: 11px; overflow: hidden; border: 2px solid var(--line); box-shadow: var(--shadow-sm); }
+    .thumb.rep { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
     .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .thumb .rep-badge {
-      position: absolute; top: 4px; left: 4px; background: var(--forest); color: #fff;
-      font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 999px; letter-spacing: .02em;
-    }
-    .thumb .rm {
-      position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border-radius: 50%;
-      background: rgba(20,32,26,.6); color: #fff; font-size: 12px; line-height: 18px; text-align: center; cursor: pointer;
-      transition: background .15s ease;
-    }
+    .thumb .rep-badge { position: absolute; top: 4px; left: 4px; background: var(--accent); color: #fff; font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 999px; letter-spacing: .02em; }
+    .thumb .rm { position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border-radius: 50%; background: rgba(22,36,29,.6); color: #fff; font-size: 12px; line-height: 18px; text-align: center; cursor: pointer; transition: background .15s ease; }
     .thumb .rm:hover { background: var(--danger); }
 
     /* ---------- 콘텐츠 조건 입력 ---------- */
     .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    @media (max-width: 620px) { .grid2 { grid-template-columns: 1fr; } }
+    @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
     .field { margin-bottom: 16px; }
     .field:last-child { margin-bottom: 0; }
     .field label { display: block; font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; letter-spacing: .01em; }
@@ -135,9 +160,7 @@
       font-size: 13.5px; font-family: inherit; background: var(--paper-sunken); color: var(--ink);
       transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
     }
-    input[type="text"]:focus, textarea:focus {
-      outline: none; border-color: var(--forest); background: var(--paper); box-shadow: 0 0 0 3px var(--forest-tint);
-    }
+    input[type="text"]:focus, textarea:focus { outline: none; border-color: var(--accent); background: var(--paper); box-shadow: 0 0 0 3px var(--accent-tint); }
     input[type="text"]::placeholder, textarea::placeholder { color: var(--ink-faint); }
     textarea { min-height: 64px; resize: vertical; }
 
@@ -148,21 +171,21 @@
       border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-soft); cursor: pointer;
       display: flex; align-items: center; gap: 7px; transition: all .15s ease;
     }
-    .chan-tabs button:not(.active):hover { border-color: var(--forest); background: var(--forest-tint); }
-    .chan-tabs button.active { background: var(--ink); border-color: var(--ink); color: #fff; box-shadow: var(--shadow-md); }
+    .chan-tabs button:not(.active):hover { border-color: var(--accent); background: var(--accent-tint); }
+    .chan-tabs button.active { background: linear-gradient(135deg, var(--ink), #24382c); border-color: var(--ink); color: #fff; box-shadow: var(--shadow-md); }
     .chan-tabs .tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; letter-spacing: .01em; }
-    .chan-tabs button:not(.active) .tag.auto { background: var(--olive-soft); color: var(--forest); }
+    .chan-tabs button:not(.active) .tag.auto { background: var(--olive-soft); color: var(--accent-deep); }
     .chan-tabs button:not(.active) .tag.semi { background: var(--gold-soft); color: var(--gold); }
     .chan-tabs button.active .tag { background: rgba(255,255,255,.22); color: #fff; }
 
     #generateBtn {
       width: 100%; font-family: inherit; font-weight: 700; font-size: 14.5px; padding: 14px;
       border-radius: var(--radius-sm); border: none; cursor: pointer; margin-bottom: 16px;
-      background: linear-gradient(135deg, var(--forest), var(--forest-deep)); color: #fff;
-      box-shadow: 0 8px 20px -10px rgba(19,106,61,.7);
+      background: linear-gradient(135deg, var(--accent-bright), var(--accent-deep)); color: #fff;
+      box-shadow: 0 10px 22px -10px rgba(13,138,77,.65);
       transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
     }
-    #generateBtn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 26px -10px rgba(19,106,61,.8); }
+    #generateBtn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 14px 28px -10px rgba(13,138,77,.75); }
     #generateBtn:active:not(:disabled) { transform: translateY(0); }
     #generateBtn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
 
@@ -178,20 +201,15 @@
       margin-bottom: 12px; resize: vertical; color: var(--ink);
       transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
     }
-    .result-body:focus {
-      outline: none; border-color: var(--forest); background: var(--paper); box-shadow: 0 0 0 3px var(--forest-tint);
-    }
+    .result-body:focus { outline: none; border-color: var(--accent); background: var(--paper); box-shadow: 0 0 0 3px var(--accent-tint); }
     .field-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin: 0 0 7px; display: flex; align-items: baseline; gap: 6px; }
     .field-label .muted { font-weight: 400; color: var(--ink-faint); }
     .result-foot { display: flex; align-items: center; gap: 12px; }
-    .result-foot button {
-      font-family: inherit; font-weight: 700; font-size: 13px; padding: 10px 20px;
-      border-radius: var(--radius-sm); border: none; cursor: pointer; transition: all .15s ease;
-    }
-    .result-foot button.primary { background: linear-gradient(135deg, var(--forest), var(--forest-deep)); color: #fff; box-shadow: 0 6px 16px -8px rgba(19,106,61,.7); }
-    .result-foot button.primary:hover { transform: translateY(-1px); box-shadow: 0 10px 20px -8px rgba(19,106,61,.8); }
-    .result-foot button.copy { background: var(--olive-soft); color: var(--forest-deep); }
-    .result-foot button.copy:hover { background: #d9edcb; }
+    .result-foot button { font-family: inherit; font-weight: 700; font-size: 13px; padding: 10px 20px; border-radius: var(--radius-sm); border: none; cursor: pointer; transition: all .15s ease; }
+    .result-foot button.primary { background: linear-gradient(135deg, var(--accent-bright), var(--accent-deep)); color: #fff; box-shadow: 0 8px 18px -9px rgba(13,138,77,.7); }
+    .result-foot button.primary:hover { transform: translateY(-1px); box-shadow: 0 12px 22px -9px rgba(13,138,77,.8); }
+    .result-foot button.copy { background: var(--olive-soft); color: var(--accent-deep); }
+    .result-foot button.copy:hover { background: #d3f2cd; }
     .result-foot .note { font-size: 11.5px; color: var(--ink-faint); }
 
     .empty { color: var(--ink-faint); font-size: 13px; padding: 44px 0; text-align: center; }
@@ -199,11 +217,8 @@
 
     /* ---------- 설정 탭 ---------- */
     .key-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin-top: 14px; }
-    @media (max-width: 620px) { .key-grid { grid-template-columns: 1fr; } }
-    .key-row {
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
-      padding: 10px 13px; background: var(--paper-sunken); border: 1px solid var(--line); border-radius: var(--radius-sm);
-    }
+    @media (max-width: 560px) { .key-grid { grid-template-columns: 1fr; } }
+    .key-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 13px; background: var(--paper-sunken); border: 1px solid var(--line); border-radius: var(--radius-sm); }
     .key-row code { font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--ink); }
     .key-row .req { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
     .key-row .req.must { background: var(--gold-soft); color: var(--gold); }
@@ -212,134 +227,176 @@
   </style>
 </head>
 <body>
-  <div class="container">
-    <header class="page-head">
-      <div>
-        <p class="eyebrow">OSMU Content Engine</p>
-        <h1>율사이트 콘텐츠 자동 생성배포 시스템</h1>
-        <p class="head-sub">1개의 소스로 인스타그램 · 스레드 · 네이버블로그 · 프릿지매거진 문구를 한 번에 생성합니다</p>
-      </div>
-      <div class="brand-badge">프릿지</div>
-    </header>
-
-    <div class="top-tabs">
-      <button class="active" data-tab="main">콘텐츠 생성배포</button>
-      <button data-tab="settings">설정</button>
-    </div>
-
-    <!-- ===== 콘텐츠 생성배포 탭 ===== -->
-    <div id="tab-main">
-      <div class="panel">
-        <div class="panel-title"><span class="step-num">1</span>사진 등록 <span class="hint">여러 장 가능 · 4채널 공용 · 첫 번째가 대표 사진</span></div>
-        <div id="dropZone">여기를 눌러 사진을 선택하세요 (여러 장 가능)</div>
-        <input type="file" id="photoInput" accept="image/*" multiple style="display:none">
-        <div id="photoPreview"></div>
-      </div>
-
-      <div class="panel">
-        <div class="panel-title"><span class="step-num">2</span>콘텐츠 조건 입력</div>
-        <div class="grid2">
-          <div class="field">
-            <label>콘텐츠 유형</label>
-            <input type="text" id="contentType" placeholder="예: 입점사 소개">
-          </div>
-          <div class="field">
-            <label>대상 (브랜드/상품/프로그램)</label>
-            <input type="text" id="targetBrand" placeholder="예: ○○공방">
-          </div>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">프</div>
+        <div>
+          <p class="brand-name">프릿지</p>
+          <p class="brand-caption">OSMU Engine</p>
         </div>
-        <div class="field">
-          <label>핵심 메시지</label>
-          <input type="text" id="coreMessage" placeholder="예: 지역 재료로 만든 친환경 제품">
-        </div>
-        <div class="grid2">
-          <div class="field">
-            <label>분위기</label>
-            <input type="text" id="tone" placeholder="예: 따뜻하고 담백하게">
+      </div>
+      <nav class="side-nav">
+        <button class="nav-btn active" data-tab="main"><span class="dot"></span>콘텐츠 생성배포</button>
+        <button class="nav-btn" data-tab="settings"><span class="dot"></span>설정</button>
+      </nav>
+      <div class="side-foot">
+        <p>율사이트 × 상상우리<br>1소스 → 4채널 자동 배포</p>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="content-inner">
+        <header class="page-head">
+          <p class="eyebrow">Dashboard</p>
+          <h1>율사이트 콘텐츠 자동 생성배포 시스템</h1>
+          <p class="head-sub">1개의 소스로 인스타그램 · 스레드 · 네이버블로그 · 프릿지매거진 문구를 한 번에 생성합니다</p>
+        </header>
+
+        <div class="stats-strip">
+          <div class="stat-card" style="--stat-color:var(--accent)">
+            <p class="stat-label">등록 사진</p>
+            <p class="stat-value" id="statPhotos">0<span class="unit">장</span></p>
           </div>
-          <div class="field">
-            <label>메모 (선택)</label>
-            <input type="text" id="memo" placeholder="추가로 반영할 내용">
+          <div class="stat-card" style="--stat-color:var(--gold)">
+            <p class="stat-label">문구 상태</p>
+            <p class="stat-value" id="statGenerated">대기중</p>
+          </div>
+          <div class="stat-card" style="--stat-color:var(--accent-deep)">
+            <p class="stat-label">자동 발행</p>
+            <p class="stat-value" id="statPublished">0<span class="unit">/ 2</span></p>
+          </div>
+          <div class="stat-card" style="--stat-color:#8a6fd6">
+            <p class="stat-label">복사 완료</p>
+            <p class="stat-value" id="statCopied">0<span class="unit">/ 2</span></p>
           </div>
         </div>
-        <div class="field">
-          <label>참고 상품 URL (선택)</label>
-          <input type="text" id="productUrl" placeholder="https://f-ridge.com/products/...">
+
+        <!-- ===== 콘텐츠 생성배포 탭 ===== -->
+        <div id="tab-main">
+          <div class="panel">
+            <div class="panel-title"><span class="step-num">1</span>사진 등록 <span class="hint">여러 장 가능 · 4채널 공용 · 첫 번째가 대표 사진</span></div>
+            <div id="dropZone">여기를 눌러 사진을 선택하세요 (여러 장 가능)</div>
+            <input type="file" id="photoInput" accept="image/*" multiple style="display:none">
+            <div id="photoPreview"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title"><span class="step-num">2</span>콘텐츠 조건 입력</div>
+            <div class="grid2">
+              <div class="field">
+                <label>콘텐츠 유형</label>
+                <input type="text" id="contentType" placeholder="예: 입점사 소개">
+              </div>
+              <div class="field">
+                <label>대상 (브랜드/상품/프로그램)</label>
+                <input type="text" id="targetBrand" placeholder="예: ○○공방">
+              </div>
+            </div>
+            <div class="field">
+              <label>핵심 메시지</label>
+              <input type="text" id="coreMessage" placeholder="예: 지역 재료로 만든 친환경 제품">
+            </div>
+            <div class="grid2">
+              <div class="field">
+                <label>분위기</label>
+                <input type="text" id="tone" placeholder="예: 따뜻하고 담백하게">
+              </div>
+              <div class="field">
+                <label>메모 (선택)</label>
+                <input type="text" id="memo" placeholder="추가로 반영할 내용">
+              </div>
+            </div>
+            <div class="field">
+              <label>참고 상품 URL (선택)</label>
+              <input type="text" id="productUrl" placeholder="https://f-ridge.com/products/...">
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title"><span class="step-num">3</span>채널별 문구 생성 · 발행</div>
+            <div class="chan-tabs" id="chanTabs">
+              <button class="active" data-c="instagram">인스타그램 <span class="tag auto">자동</span></button>
+              <button data-c="threads">스레드 <span class="tag auto">자동</span></button>
+              <button data-c="naverBlog">네이버 블로그 <span class="tag semi">복사</span></button>
+              <button data-c="fridgeMagazine">프릿지 <span class="tag semi">복사</span></button>
+            </div>
+
+            <button id="generateBtn">문구 생성 / 다시 생성</button>
+            <p class="status" id="status" role="status"></p>
+
+            <p class="empty" id="emptyMsg">조건을 입력하고 "문구 생성"을 누르면 여기 결과가 표시됩니다.</p>
+
+            <div class="result-card" data-c="instagram">
+              <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요)</span></p>
+              <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
+              <div class="result-foot"><button class="primary" data-action="publish">인스타그램에 발행</button><span class="note">검토 후 바로 발행</span></div>
+            </div>
+            <div class="result-card" data-c="threads">
+              <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요)</span></p>
+              <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
+              <div class="result-foot"><button class="primary" data-action="publish">스레드에 발행</button><span class="note">검토 후 바로 발행</span></div>
+            </div>
+            <div class="result-card" data-c="naverBlog">
+              <p class="field-label">본문 <span class="muted">(확인 후 수정하세요)</span></p>
+              <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
+              <div class="result-foot"><button class="copy" data-action="copy">복사</button><span class="note">복사해서 붙여넣기</span></div>
+            </div>
+            <div class="result-card" data-c="fridgeMagazine">
+              <p class="field-label">본문 <span class="muted">(확인 후 수정하세요)</span></p>
+              <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
+              <div class="result-foot"><button class="copy" data-action="copy">복사</button><span class="note">복사해서 붙여넣기</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== 설정 탭 ===== -->
+        <div id="tab-settings" style="display:none">
+          <div class="panel">
+            <div class="panel-title">API 연동 상태</div>
+            <p class="settings-note">
+              실제 키 값은 Apps Script 편집기 → 프로젝트 설정 → 스크립트 속성에서 등록합니다
+              (보안상 이 화면에서는 값을 직접 다루지 않습니다).
+            </p>
+            <div class="key-grid">
+              <div class="key-row"><code>GEMINI_API_KEY</code><span class="req must">필수</span></div>
+              <div class="key-row"><code>CLOUDINARY_CLOUD_NAME</code><span class="req opt">발행 시</span></div>
+              <div class="key-row"><code>CLOUDINARY_API_KEY</code><span class="req opt">발행 시</span></div>
+              <div class="key-row"><code>CLOUDINARY_API_SECRET</code><span class="req opt">발행 시</span></div>
+              <div class="key-row"><code>IG_USER_ID</code><span class="req opt">인스타 발행</span></div>
+              <div class="key-row"><code>IG_ACCESS_TOKEN</code><span class="req opt">인스타 발행</span></div>
+              <div class="key-row"><code>THREADS_USER_ID</code><span class="req opt">스레드 발행</span></div>
+              <div class="key-row"><code>THREADS_ACCESS_TOKEN</code><span class="req opt">스레드 발행</span></div>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div class="panel">
-        <div class="panel-title"><span class="step-num">3</span>채널별 문구 생성 · 발행</div>
-        <div class="chan-tabs" id="chanTabs">
-          <button class="active" data-c="instagram">인스타그램 <span class="tag auto">자동</span></button>
-          <button data-c="threads">스레드 <span class="tag auto">자동</span></button>
-          <button data-c="naverBlog">네이버 블로그 <span class="tag semi">복사</span></button>
-          <button data-c="fridgeMagazine">프릿지 <span class="tag semi">복사</span></button>
-        </div>
-
-        <button id="generateBtn">문구 생성 / 다시 생성</button>
-        <p class="status" id="status" role="status"></p>
-
-        <p class="empty" id="emptyMsg">조건을 입력하고 "문구 생성"을 누르면 여기 결과가 표시됩니다.</p>
-
-        <div class="result-card" data-c="instagram">
-          <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요)</span></p>
-          <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
-          <div class="result-foot"><button class="primary" data-action="publish">인스타그램에 발행</button><span class="note">검토 후 바로 발행</span></div>
-        </div>
-        <div class="result-card" data-c="threads">
-          <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요)</span></p>
-          <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
-          <div class="result-foot"><button class="primary" data-action="publish">스레드에 발행</button><span class="note">검토 후 바로 발행</span></div>
-        </div>
-        <div class="result-card" data-c="naverBlog">
-          <p class="field-label">본문 <span class="muted">(확인 후 수정하세요)</span></p>
-          <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
-          <div class="result-foot"><button class="copy" data-action="copy">복사</button><span class="note">복사해서 붙여넣기</span></div>
-        </div>
-        <div class="result-card" data-c="fridgeMagazine">
-          <p class="field-label">본문 <span class="muted">(확인 후 수정하세요)</span></p>
-          <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
-          <div class="result-foot"><button class="copy" data-action="copy">복사</button><span class="note">복사해서 붙여넣기</span></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== 설정 탭 ===== -->
-    <div id="tab-settings" style="display:none">
-      <div class="panel">
-        <div class="panel-title">API 연동 상태</div>
-        <p class="settings-note">
-          실제 키 값은 Apps Script 편집기 → 프로젝트 설정 → 스크립트 속성에서 등록합니다
-          (보안상 이 화면에서는 값을 직접 다루지 않습니다).
-        </p>
-        <div class="key-grid">
-          <div class="key-row"><code>GEMINI_API_KEY</code><span class="req must">필수</span></div>
-          <div class="key-row"><code>CLOUDINARY_CLOUD_NAME</code><span class="req opt">발행 시</span></div>
-          <div class="key-row"><code>CLOUDINARY_API_KEY</code><span class="req opt">발행 시</span></div>
-          <div class="key-row"><code>CLOUDINARY_API_SECRET</code><span class="req opt">발행 시</span></div>
-          <div class="key-row"><code>IG_USER_ID</code><span class="req opt">인스타 발행</span></div>
-          <div class="key-row"><code>IG_ACCESS_TOKEN</code><span class="req opt">인스타 발행</span></div>
-          <div class="key-row"><code>THREADS_USER_ID</code><span class="req opt">스레드 발행</span></div>
-          <div class="key-row"><code>THREADS_ACCESS_TOKEN</code><span class="req opt">스레드 발행</span></div>
-        </div>
-      </div>
-    </div>
+    </main>
   </div>
 
   <script>
-    var state = { channels: null, historyId: null, photos: [], activeChannel: 'instagram' };
+    var state = { channels: null, historyId: null, photos: [], activeChannel: 'instagram', published: {}, copied: {} };
 
-    // ---------- 상단 탭 ----------
-    document.querySelectorAll('.top-tabs button').forEach(function (btn) {
+    // ---------- 사이드바 탭 ----------
+    document.querySelectorAll('.nav-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        document.querySelectorAll('.top-tabs button').forEach(function (b) { b.classList.remove('active'); });
+        document.querySelectorAll('.nav-btn').forEach(function (b) { b.classList.remove('active'); });
         btn.classList.add('active');
         var tab = btn.dataset.tab;
         document.getElementById('tab-main').style.display = tab === 'main' ? '' : 'none';
         document.getElementById('tab-settings').style.display = tab === 'settings' ? '' : 'none';
       });
     });
+
+    // ---------- 대시보드 통계 ----------
+    function updateStats() {
+      document.getElementById('statPhotos').innerHTML = state.photos.length + '<span class="unit">장</span>';
+      document.getElementById('statGenerated').textContent = state.channels ? '생성 완료' : '대기중';
+      var pubCount = Object.keys(state.published).length;
+      document.getElementById('statPublished').innerHTML = pubCount + '<span class="unit">/ 2</span>';
+      var copyCount = Object.keys(state.copied).length;
+      document.getElementById('statCopied').innerHTML = copyCount + '<span class="unit">/ 2</span>';
+    }
 
     // ---------- 사진 등록 ----------
     var dropZone = document.getElementById('dropZone');
@@ -359,6 +416,7 @@
         reader.onload = function () {
           state.photos.push({ name: file.name, dataUrl: reader.result });
           renderPhotos();
+          updateStats();
         };
         reader.readAsDataURL(file);
       });
@@ -379,6 +437,7 @@
         el.addEventListener('click', function () {
           state.photos.splice(Number(el.dataset.i), 1);
           renderPhotos();
+          updateStats();
         });
       });
     }
@@ -431,6 +490,8 @@
       document.getElementById('generateBtn').disabled = false;
       state.channels = data.channels;
       state.historyId = data.historyId;
+      state.published = {};
+      state.copied = {};
 
       document.getElementById('emptyMsg').style.display = 'none';
 
@@ -442,6 +503,8 @@
       document.querySelectorAll('.result-card').forEach(function (c) {
         c.classList.toggle('show', c.dataset.c === state.activeChannel);
       });
+
+      updateStats();
 
       var note = '생성 완료. 검토 후 발행/복사하세요.';
       if (data.productContext && !data.productContext.fetched) {
@@ -482,7 +545,12 @@
       ta.value = text;
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand('copy'); setStatus(channel + ' 내용이 복사되었습니다.'); }
+      try {
+        document.execCommand('copy');
+        setStatus(channel + ' 내용이 복사되었습니다.');
+        state.copied[channel] = true;
+        updateStats();
+      }
       catch (e) { setStatus('복사에 실패했습니다. 직접 선택해 복사해주세요.', true); }
       document.body.removeChild(ta);
     }
@@ -499,6 +567,8 @@
       google.script.run
         .withSuccessHandler(function (res) {
           setStatus(channel + ' 발행 완료! (게시물 ID: ' + res.postId + ')');
+          state.published[channel] = true;
+          updateStats();
         })
         .withFailureHandler(onFailure)
         .publishChannel(state.historyId, channel, repPhoto, caption);
@@ -508,6 +578,8 @@
       document.getElementById('generateBtn').disabled = false;
       setStatus('오류: ' + error.message, true);
     }
+
+    updateStats();
   </script>
 </body>
 </html>
