@@ -131,6 +131,12 @@ function buildPrompt_(input, rules, productContext) {
     '대상 브랜드/상품: ' + input.targetBrand,
     '핵심 메시지: ' + input.coreMessage
   ];
+  if (input.tone) {
+    lines.push('분위기/톤: ' + input.tone);
+  }
+  if (input.memo) {
+    lines.push('추가로 반영할 메모: ' + input.memo);
+  }
   if (input.productUrl) {
     lines.push('참고 상품 URL: ' + input.productUrl);
     if (productContext && productContext.fetched) {
