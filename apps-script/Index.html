@@ -55,10 +55,10 @@
     .brand { display: flex; align-items: center; gap: 11px; padding: 0 6px 24px; margin-bottom: 20px; border-bottom: 1px solid var(--line); }
     .brand-mark {
       width: 38px; height: 38px; border-radius: 11px; flex: none;
-      background: linear-gradient(135deg, var(--accent-bright), var(--accent-deep));
+      background: var(--accent-deep);
       color: #fff; display: flex; align-items: center; justify-content: center;
       font-family: "Gowun Batang", serif; font-weight: 700; font-size: 17px;
-      box-shadow: 0 8px 18px -8px rgba(13,138,77,.65);
+      box-shadow: 0 6px 14px -6px rgba(13,138,77,.55);
     }
     .brand-name { font-family: "Gowun Batang", serif; font-weight: 700; font-size: 15.5px; margin: 0; color: var(--ink); }
     .brand-caption { font-family: "JetBrains Mono", monospace; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); margin: 2px 0 0; }
@@ -72,8 +72,20 @@
     }
     .nav-btn .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--line); flex: none; transition: background .15s ease; }
     .nav-btn:hover { background: var(--accent-tint); color: var(--accent-deep); }
-    .nav-btn.active { background: linear-gradient(135deg, var(--accent), var(--accent-deep)); color: #fff; box-shadow: var(--shadow-md); }
+    .nav-btn.active { background: var(--accent-deep); color: #fff; box-shadow: var(--shadow-sm); }
     .nav-btn.active .dot { background: #fff; }
+
+    /* ---------- 최근 작업 (사이드바) ---------- */
+    .side-history { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .side-history-title { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 10px; }
+    .history-list { display: flex; flex-direction: column; gap: 8px; }
+    .history-empty { font-size: 11.5px; color: var(--ink-faint); }
+    .history-item { padding: 8px 10px; background: var(--paper-sunken); border-radius: 9px; border: 1px solid var(--line-soft); }
+    .history-item .h-type { font-size: 11.5px; font-weight: 700; color: var(--ink); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .history-item .h-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 3px; }
+    .history-item .h-date { font-size: 10px; color: var(--ink-faint); font-family: "JetBrains Mono", monospace; }
+    .history-item .h-status { font-size: 9.5px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: var(--olive-soft); color: var(--accent-deep); }
+    .history-item .h-status.pending { background: var(--gold-soft); color: var(--gold); }
 
     .side-foot { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--line); }
     .side-foot p { font-size: 11px; color: var(--ink-faint); margin: 0; line-height: 1.6; }
@@ -139,11 +151,19 @@
     }
     .step-num {
       width: 25px; height: 25px; border-radius: 50%;
-      background: linear-gradient(135deg, var(--accent-bright), var(--accent-deep)); color: #fff;
+      background: var(--accent-deep); color: #fff;
       display: inline-flex; align-items: center; justify-content: center; font-size: 12.5px; flex: none;
-      font-family: "Noto Sans KR", sans-serif; font-weight: 700; box-shadow: 0 4px 10px -3px rgba(13,138,77,.6);
+      font-family: "Noto Sans KR", sans-serif; font-weight: 700;
     }
     .panel-title .hint { font-weight: 400; font-size: 12px; color: var(--ink-faint); font-family: "Noto Sans KR", sans-serif; margin-left: 2px; }
+    .panel-head-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 18px; }
+    .panel-head-row .panel-title { margin-bottom: 0; }
+    .reset-btn {
+      font-family: inherit; font-size: 12px; font-weight: 700; color: var(--ink-soft);
+      background: var(--paper-sunken); border: 1px solid var(--line); border-radius: 999px;
+      padding: 7px 14px; cursor: pointer; transition: all .15s ease; flex: none;
+    }
+    .reset-btn:hover { border-color: var(--danger); color: var(--danger); background: #fdf1ef; }
 
     /* ---------- 사진 등록 ---------- */
     #dropZone {
@@ -186,7 +206,7 @@
       display: flex; align-items: center; gap: 7px; transition: all .15s ease;
     }
     .chan-tabs button:not(.active):hover { border-color: var(--accent); background: var(--accent-tint); }
-    .chan-tabs button.active { background: linear-gradient(135deg, var(--ink), #24382c); border-color: var(--ink); color: #fff; box-shadow: var(--shadow-md); }
+    .chan-tabs button.active { background: var(--ink); border-color: var(--ink); color: #fff; box-shadow: var(--shadow-sm); }
     .chan-tabs .tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; letter-spacing: .01em; }
     .chan-tabs button:not(.active) .tag.auto { background: var(--olive-soft); color: var(--accent-deep); }
     .chan-tabs button:not(.active) .tag.semi { background: var(--gold-soft); color: var(--gold); }
@@ -195,13 +215,20 @@
     #generateBtn {
       width: 100%; font-family: inherit; font-weight: 700; font-size: 14.5px; padding: 14px;
       border-radius: var(--radius-sm); border: none; cursor: pointer; margin-bottom: 16px;
-      background: linear-gradient(135deg, var(--accent-bright), var(--accent-deep)); color: #fff;
-      box-shadow: 0 10px 22px -10px rgba(13,138,77,.65);
-      transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+      background: var(--accent-deep); color: #fff;
+      display: flex; align-items: center; justify-content: center; gap: 9px;
+      box-shadow: 0 6px 16px -8px rgba(13,138,77,.55);
+      transition: background .15s ease, box-shadow .12s ease, opacity .12s ease;
     }
-    #generateBtn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 14px 28px -10px rgba(13,138,77,.75); }
-    #generateBtn:active:not(:disabled) { transform: translateY(0); }
-    #generateBtn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+    #generateBtn:hover:not(:disabled) { background: #0a7742; box-shadow: 0 8px 20px -8px rgba(13,138,77,.65); }
+    #generateBtn:disabled { opacity: .6; cursor: not-allowed; }
+    .spinner {
+      width: 14px; height: 14px; border-radius: 50%; flex: none; display: none;
+      border: 2px solid rgba(255,255,255,.35); border-top-color: #fff;
+      animation: spin .7s linear infinite;
+    }
+    #generateBtn.loading .spinner { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
     .status { min-height: 18px; font-size: 12.5px; color: var(--ink-soft); margin: -6px 0 16px; }
     .status.error { color: var(--danger); font-weight: 600; }
@@ -220,8 +247,8 @@
     .field-label .muted { font-weight: 400; color: var(--ink-faint); }
     .result-foot { display: flex; align-items: center; gap: 12px; }
     .result-foot button { font-family: inherit; font-weight: 700; font-size: 13px; padding: 10px 20px; border-radius: var(--radius-sm); border: none; cursor: pointer; transition: all .15s ease; }
-    .result-foot button.primary { background: linear-gradient(135deg, var(--accent-bright), var(--accent-deep)); color: #fff; box-shadow: 0 8px 18px -9px rgba(13,138,77,.7); }
-    .result-foot button.primary:hover { transform: translateY(-1px); box-shadow: 0 12px 22px -9px rgba(13,138,77,.8); }
+    .result-foot button.primary { background: var(--accent-deep); color: #fff; box-shadow: 0 6px 14px -8px rgba(13,138,77,.6); }
+    .result-foot button.primary:hover { background: #0a7742; }
     .result-foot button.copy { background: var(--olive-soft); color: var(--accent-deep); }
     .result-foot button.copy:hover { background: #d3f2cd; }
     .result-foot .note { font-size: 11.5px; color: var(--ink-faint); }
@@ -257,6 +284,12 @@
         <button class="nav-btn active" data-tab="main"><span class="dot"></span>콘텐츠 생성배포</button>
         <button class="nav-btn" data-tab="settings"><span class="dot"></span>설정</button>
       </nav>
+      <div class="side-history">
+        <p class="side-history-title">최근 작업</p>
+        <div class="history-list" id="historyList">
+          <p class="history-empty">아직 생성 이력이 없습니다.</p>
+        </div>
+      </div>
       <div class="side-foot">
         <p>율사이트 × 상상우리<br>1소스 → 4채널 자동 배포</p>
       </div>
@@ -357,7 +390,10 @@
           </div>
 
           <div class="panel">
-            <div class="panel-title"><span class="step-num">3</span>채널별 문구 생성 · 발행</div>
+            <div class="panel-head-row">
+              <div class="panel-title"><span class="step-num">3</span>채널별 문구 생성 · 발행</div>
+              <button class="reset-btn" id="resetBtn" type="button">새 콘텐츠 시작</button>
+            </div>
             <div class="chan-tabs" id="chanTabs">
               <button class="active" data-c="instagram">인스타그램 <span class="tag auto" title="버튼 클릭 시 바로 발행됩니다">자동</span></button>
               <button data-c="threads">스레드 <span class="tag auto" title="버튼 클릭 시 바로 발행됩니다">자동</span></button>
@@ -365,7 +401,7 @@
               <button data-c="fridgeMagazine">프릿지 <span class="tag semi" title="복사 버튼으로 복사한 뒤 직접 붙여넣어야 합니다">복사</span></button>
             </div>
 
-            <button id="generateBtn">문구 생성 / 다시 생성</button>
+            <button id="generateBtn"><span class="spinner"></span><span id="generateBtnLabel">문구 생성 / 다시 생성</span></button>
             <p class="status" id="status" role="status"></p>
 
             <p class="empty" id="emptyMsg">조건을 입력하고 "문구 생성"을 누르면 여기 결과가 표시됩니다.</p>
@@ -487,10 +523,20 @@
       state.photos.forEach(function (p, i) {
         var div = document.createElement('div');
         div.className = 'thumb' + (i === 0 ? ' rep' : '');
+        div.title = i === 0 ? '대표 사진' : '클릭하면 대표 사진으로 지정됩니다';
         div.innerHTML = (i === 0 ? '<span class="rep-badge">대표</span>' : '') +
           '<img src="' + p.dataUrl + '">' +
           '<span class="rm" data-i="' + i + '">×</span>';
         wrap.appendChild(div);
+      });
+      wrap.querySelectorAll('.thumb').forEach(function (el, i) {
+        el.addEventListener('click', function (e) {
+          if (e.target.classList.contains('rm')) return;
+          if (i === 0) return;
+          var picked = state.photos.splice(i, 1)[0];
+          state.photos.unshift(picked);
+          renderPhotos();
+        });
       });
       wrap.querySelectorAll('.rm').forEach(function (el) {
         el.addEventListener('click', function () {
@@ -537,6 +583,8 @@
 
       var btn = document.getElementById('generateBtn');
       btn.disabled = true;
+      btn.classList.add('loading');
+      document.getElementById('generateBtnLabel').textContent = '생성 중...';
       setStatus('생성 중입니다... (몇 초 걸릴 수 있습니다)');
 
       google.script.run
@@ -546,7 +594,10 @@
     });
 
     function onGenerateSuccess(data) {
-      document.getElementById('generateBtn').disabled = false;
+      var btn = document.getElementById('generateBtn');
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      document.getElementById('generateBtnLabel').textContent = '문구 생성 / 다시 생성';
       state.channels = data.channels;
       state.historyId = data.historyId;
       state.published = {};
@@ -570,6 +621,7 @@
         note += ' (상품 URL은 열람하지 못해 핵심 메시지만으로 작성됨)';
       }
       setStatus(note);
+      loadHistory();
     }
 
     function formatShort(c) {
@@ -647,17 +699,90 @@
           setStatus(channel + ' 발행 완료! (게시물 ID: ' + res.postId + ')');
           state.published[channel] = true;
           updateStats();
+          loadHistory();
         })
         .withFailureHandler(onFailure)
         .publishChannel(state.historyId, channel, repPhoto, caption);
     }
 
     function onFailure(error) {
-      document.getElementById('generateBtn').disabled = false;
+      var btn = document.getElementById('generateBtn');
+      btn.disabled = false;
+      btn.classList.remove('loading');
+      document.getElementById('generateBtnLabel').textContent = '문구 생성 / 다시 생성';
       setStatus('오류: ' + error.message, true);
     }
 
+    // ---------- 최근 작업 이력 (대시보드) ----------
+    function loadHistory() {
+      google.script.run.withSuccessHandler(renderHistory).withFailureHandler(function () {}).getRecentHistory(6);
+    }
+    function renderHistory(list) {
+      var wrap = document.getElementById('historyList');
+      if (!list || !list.length) { wrap.innerHTML = '<p class="history-empty">아직 생성 이력이 없습니다.</p>'; return; }
+      wrap.innerHTML = list.map(function (h) {
+        var d = h.date ? new Date(h.date) : null;
+        var dateStr = d ? (d.getMonth() + 1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') : '';
+        var statusClass = h.status === '대기' ? 'pending' : '';
+        return '<div class="history-item">' +
+          '<span class="h-type">' + escapeHtml(h.targetBrand || h.contentType || '(제목 없음)') + '</span>' +
+          '<div class="h-meta"><span class="h-date">' + dateStr + '</span><span class="h-status ' + statusClass + '">' + escapeHtml(h.status || '대기') + '</span></div>' +
+          '</div>';
+      }).join('');
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    // ---------- 새 콘텐츠 시작 (초기화) ----------
+    document.getElementById('resetBtn').addEventListener('click', function () {
+      if (!confirm('입력한 내용과 결과를 모두 지우고 새로 시작할까요?')) return;
+      ['contentType', 'targetBrand', 'coreMessage', 'tone', 'memo', 'productUrl'].forEach(function (id) {
+        document.getElementById(id).value = '';
+      });
+      state.photos = [];
+      state.channels = null;
+      state.historyId = null;
+      state.published = {};
+      state.copied = {};
+      renderPhotos();
+      document.querySelectorAll('.result-body').forEach(function (ta) { ta.value = ''; });
+      document.querySelectorAll('.result-card').forEach(function (c) { c.classList.remove('show'); });
+      document.getElementById('emptyMsg').style.display = '';
+      setStatus('');
+      updateStats();
+      saveDraft();
+    });
+
+    // ---------- 임시 저장 (새로고침해도 입력값 유지) ----------
+    var DRAFT_KEY = 'yulsite_osmu_draft_v1';
+    var DRAFT_FIELDS = ['contentType', 'targetBrand', 'coreMessage', 'tone', 'memo', 'productUrl'];
+    function saveDraft() {
+      try {
+        var draft = {};
+        DRAFT_FIELDS.forEach(function (id) { draft[id] = document.getElementById(id).value; });
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      } catch (e) { /* localStorage 사용 불가 시 조용히 무시 */ }
+    }
+    function restoreDraft() {
+      try {
+        var raw = localStorage.getItem(DRAFT_KEY);
+        if (!raw) return;
+        var draft = JSON.parse(raw);
+        DRAFT_FIELDS.forEach(function (id) {
+          if (draft[id]) document.getElementById(id).value = draft[id];
+        });
+      } catch (e) { /* 무시 */ }
+    }
+    DRAFT_FIELDS.forEach(function (id) {
+      document.getElementById(id).addEventListener('input', saveDraft);
+    });
+
+    restoreDraft();
     updateStats();
+    loadHistory();
   </script>
 </body>
 </html>

@@ -225,6 +225,28 @@ function saveContentHistory(input, channels) {
   return id;
 }
 
+/** 대시보드용: 최근 생성 이력을 최신순으로 N건 반환합니다. */
+function getRecentHistory(limit) {
+  limit = limit || 6;
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Content_History');
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var rows = [];
+  for (var i = data.length - 1; i >= 1; i--) {
+    var r = data[i];
+    if (!r[0]) continue;
+    rows.push({
+      id: r[0],
+      date: r[1] ? new Date(r[1]).toISOString() : '',
+      contentType: r[2] || '',
+      targetBrand: r[3] || '',
+      status: r[9] || '대기'
+    });
+    if (rows.length >= limit) break;
+  }
+  return rows;
+}
+
 /**
  * 이미지를 Cloudinary에 업로드해 공개 URL을 발급받습니다.
  * base64DataUrl: "data:image/png;base64,...." 형태의 문자열
