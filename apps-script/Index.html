@@ -3,114 +3,224 @@
 <head>
   <base target="_top">
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;600;700;900&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg: #f6f7f0;
+      --paper: #ffffff;
+      --paper-sunken: #f2f6ea;
+      --ink: #14201a;
+      --ink-soft: #566253;
+      --ink-faint: #8a9284;
+      --line: #e2e9d3;
+      --line-soft: #edf1e4;
+      --forest: #1c8a50;
+      --forest-deep: #136a3d;
+      --forest-tint: rgba(28,138,80,.08);
+      --olive-soft: #e4f3da;
+      --gold: #c98a1e;
+      --gold-soft: #fdf0d6;
+      --danger: #c0402c;
+      --radius-lg: 16px;
+      --radius-md: 11px;
+      --radius-sm: 7px;
+      --shadow-sm: 0 1px 2px rgba(20,32,26,.05);
+      --shadow-md: 0 1px 2px rgba(20,32,26,.04), 0 10px 26px -14px rgba(20,32,26,.18);
+      --shadow-lg: 0 4px 10px rgba(20,32,26,.06), 0 20px 44px -20px rgba(20,32,26,.22);
+    }
     * { box-sizing: border-box; }
+    ::selection { background: var(--olive-soft); color: var(--forest-deep); }
     body {
-      font-family: -apple-system, "Noto Sans KR", "Malgun Gothic", sans-serif;
-      margin: 0; padding: 24px; background-color: #fbfbf5; color: #14201a;
+      font-family: "Noto Sans KR", -apple-system, "Malgun Gothic", sans-serif;
+      margin: 0; padding: 40px 20px 80px;
+      background:
+        radial-gradient(1100px 420px at 12% -8%, rgba(28,138,80,.07), transparent 60%),
+        radial-gradient(900px 360px at 100% 0%, rgba(201,138,30,.06), transparent 55%),
+        var(--bg);
+      color: var(--ink);
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
     }
-    .container { max-width: 900px; margin: 0 auto; }
-    h1 { font-size: 22px; color: #14201a; margin: 0 0 16px; }
+    .container { max-width: 880px; margin: 0 auto; }
 
-    .top-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    /* ---------- 헤더 ---------- */
+    header.page-head {
+      display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;
+      margin-bottom: 28px; padding-bottom: 22px; border-bottom: 1px solid var(--line);
+    }
+    .eyebrow {
+      font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--forest); margin: 0 0 8px; font-weight: 500;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .eyebrow::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--forest);
+      box-shadow: 0 0 0 3px var(--forest-tint);
+    }
+    h1 {
+      font-family: "Gowun Batang", Georgia, serif; font-weight: 700;
+      font-size: 28px; color: var(--ink); margin: 0; letter-spacing: -.01em;
+    }
+    .head-sub { font-size: 12.5px; color: var(--ink-faint); margin: 6px 0 0; font-family: "Noto Sans KR", sans-serif; }
+    .brand-badge {
+      flex: none; font-family: "Gowun Batang", serif; font-size: 13px; font-weight: 700;
+      color: #fff; background: linear-gradient(135deg, var(--forest), var(--forest-deep));
+      padding: 9px 16px; border-radius: 999px; box-shadow: var(--shadow-md); letter-spacing: .02em;
+    }
+
+    /* ---------- 상단 탭 ---------- */
+    .top-tabs { display: flex; gap: 8px; margin-bottom: 24px; }
     .top-tabs button {
-      font-family: inherit; font-size: 14px; font-weight: 700; padding: 10px 20px;
-      border-radius: 8px; border: 1px solid #e2e9d3; background: #fff; color: #566253; cursor: pointer;
+      font-family: inherit; font-size: 13px; font-weight: 700; padding: 11px 24px;
+      border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-soft);
+      cursor: pointer; transition: all .15s ease;
     }
-    .top-tabs button.active { background: #1c8a50; border-color: #1c8a50; color: #fff; }
+    .top-tabs button.active { background: var(--forest); border-color: var(--forest); color: #fff; box-shadow: var(--shadow-md); }
+    .top-tabs button:not(.active):hover { border-color: var(--forest); color: var(--forest); background: var(--forest-tint); }
 
+    /* ---------- 패널 공통 ---------- */
     .panel {
-      background: #fff; border: 1px solid #e2e9d3; border-radius: 12px;
-      padding: 20px; margin-bottom: 18px;
+      background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-lg);
+      padding: 26px; margin-bottom: 20px; box-shadow: var(--shadow-md);
     }
     .panel-title {
-      display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 700; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; margin-bottom: 18px;
+      font-family: "Gowun Batang", Georgia, serif; color: var(--ink);
     }
     .step-num {
-      width: 22px; height: 22px; border-radius: 50%; background: #1c8a50; color: #fff;
-      display: inline-flex; align-items: center; justify-content: center; font-size: 12px; flex: none;
+      width: 25px; height: 25px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--forest), var(--forest-deep)); color: #fff;
+      display: inline-flex; align-items: center; justify-content: center; font-size: 12.5px; flex: none;
+      font-family: "Noto Sans KR", sans-serif; font-weight: 700; box-shadow: 0 3px 8px -2px rgba(19,106,61,.55);
     }
-    .panel-title .hint { font-weight: 400; font-size: 12px; color: #8a9284; }
+    .panel-title .hint { font-weight: 400; font-size: 12px; color: var(--ink-faint); font-family: "Noto Sans KR", sans-serif; margin-left: 2px; }
 
-    /* 사진 등록 */
+    /* ---------- 사진 등록 ---------- */
     #dropZone {
-      border: 2px dashed #c7d6b8; border-radius: 10px; padding: 34px; text-align: center;
-      color: #566253; font-size: 13px; cursor: pointer; background: #f7faf1;
+      border: 1.5px dashed #c7d6b8; border-radius: var(--radius-md); padding: 40px 20px; text-align: center;
+      color: var(--ink-soft); font-size: 13px; cursor: pointer; background: var(--paper-sunken);
+      transition: all .15s ease; position: relative;
     }
-    #dropZone.drag { background: #eef5e4; border-color: #1c8a50; }
-    #photoPreview { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-    .thumb { position: relative; width: 74px; height: 74px; border-radius: 8px; overflow: hidden; border: 2px solid transparent; }
-    .thumb.rep { border-color: #1c8a50; }
+    #dropZone::before {
+      content: '＋'; display: block; font-size: 22px; color: var(--forest); margin-bottom: 8px; font-weight: 300;
+    }
+    #dropZone:hover { border-color: var(--forest); background: var(--olive-soft); }
+    #dropZone.drag { background: var(--olive-soft); border-color: var(--forest); }
+    #photoPreview { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+    .thumb { position: relative; width: 84px; height: 84px; border-radius: 10px; overflow: hidden; border: 2px solid var(--line); box-shadow: var(--shadow-sm); }
+    .thumb.rep { border-color: var(--forest); box-shadow: 0 0 0 3px var(--forest-tint); }
     .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .thumb .rep-badge {
-      position: absolute; top: 2px; left: 2px; background: #1c8a50; color: #fff;
-      font-size: 9px; padding: 1px 5px; border-radius: 999px;
+      position: absolute; top: 4px; left: 4px; background: var(--forest); color: #fff;
+      font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 999px; letter-spacing: .02em;
     }
     .thumb .rm {
-      position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 50%;
-      background: rgba(0,0,0,.55); color: #fff; font-size: 11px; line-height: 16px; text-align: center; cursor: pointer;
+      position: absolute; top: 4px; right: 4px; width: 18px; height: 18px; border-radius: 50%;
+      background: rgba(20,32,26,.6); color: #fff; font-size: 12px; line-height: 18px; text-align: center; cursor: pointer;
+      transition: background .15s ease;
     }
+    .thumb .rm:hover { background: var(--danger); }
 
-    /* 콘텐츠 조건 입력 */
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    /* ---------- 콘텐츠 조건 입력 ---------- */
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     @media (max-width: 620px) { .grid2 { grid-template-columns: 1fr; } }
-    .field { margin-bottom: 14px; }
-    .field label { display: block; font-size: 12px; font-weight: 700; color: #566253; margin-bottom: 5px; }
+    .field { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+    .field label { display: block; font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; letter-spacing: .01em; }
     input[type="text"], textarea {
-      width: 100%; padding: 9px 10px; border: 1px solid #e2e9d3; border-radius: 7px;
-      font-size: 13px; font-family: inherit; background: #f7faf1;
+      width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+      font-size: 13.5px; font-family: inherit; background: var(--paper-sunken); color: var(--ink);
+      transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
     }
-    textarea { min-height: 60px; resize: vertical; }
+    input[type="text"]:focus, textarea:focus {
+      outline: none; border-color: var(--forest); background: var(--paper); box-shadow: 0 0 0 3px var(--forest-tint);
+    }
+    input[type="text"]::placeholder, textarea::placeholder { color: var(--ink-faint); }
+    textarea { min-height: 64px; resize: vertical; }
 
-    /* 채널 탭 */
-    .chan-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    /* ---------- 채널 탭 ---------- */
+    .chan-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
     .chan-tabs button {
-      font-family: inherit; font-size: 13px; font-weight: 700; padding: 9px 16px;
-      border-radius: 999px; border: 1px solid #e2e9d3; background: #fff; color: #566253; cursor: pointer;
-      display: flex; align-items: center; gap: 6px;
+      font-family: inherit; font-size: 13px; font-weight: 700; padding: 10px 17px;
+      border-radius: 999px; border: 1px solid var(--line); background: var(--paper); color: var(--ink-soft); cursor: pointer;
+      display: flex; align-items: center; gap: 7px; transition: all .15s ease;
     }
-    .chan-tabs button.active { background: #14201a; border-color: #14201a; color: #fff; }
-    .chan-tabs .tag { font-size: 10px; padding: 2px 7px; border-radius: 999px; }
-    .chan-tabs button:not(.active) .tag.auto { background: #e4f3da; color: #1c8a50; }
-    .chan-tabs button:not(.active) .tag.semi { background: #fdf0d6; color: #c98a1e; }
-    .chan-tabs button.active .tag { background: rgba(255,255,255,.2); color: #fff; }
+    .chan-tabs button:not(.active):hover { border-color: var(--forest); background: var(--forest-tint); }
+    .chan-tabs button.active { background: var(--ink); border-color: var(--ink); color: #fff; box-shadow: var(--shadow-md); }
+    .chan-tabs .tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; letter-spacing: .01em; }
+    .chan-tabs button:not(.active) .tag.auto { background: var(--olive-soft); color: var(--forest); }
+    .chan-tabs button:not(.active) .tag.semi { background: var(--gold-soft); color: var(--gold); }
+    .chan-tabs button.active .tag { background: rgba(255,255,255,.22); color: #fff; }
 
     #generateBtn {
-      width: 100%; font-family: inherit; font-weight: 700; font-size: 14px; padding: 12px;
-      border-radius: 9px; border: none; background: #1c8a50; color: #fff; cursor: pointer; margin-bottom: 14px;
+      width: 100%; font-family: inherit; font-weight: 700; font-size: 14.5px; padding: 14px;
+      border-radius: var(--radius-sm); border: none; cursor: pointer; margin-bottom: 16px;
+      background: linear-gradient(135deg, var(--forest), var(--forest-deep)); color: #fff;
+      box-shadow: 0 8px 20px -10px rgba(19,106,61,.7);
+      transition: transform .12s ease, box-shadow .12s ease, opacity .12s ease;
     }
-    #generateBtn:hover:not(:disabled) { background: #136a3d; }
-    #generateBtn:disabled { opacity: .55; cursor: not-allowed; }
+    #generateBtn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 26px -10px rgba(19,106,61,.8); }
+    #generateBtn:active:not(:disabled) { transform: translateY(0); }
+    #generateBtn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
 
-    .status { min-height: 18px; font-size: 12px; color: #566253; margin: -4px 0 14px; }
-    .status.error { color: #c0402c; }
+    .status { min-height: 18px; font-size: 12.5px; color: var(--ink-soft); margin: -6px 0 16px; }
+    .status.error { color: var(--danger); font-weight: 600; }
 
-    .result-card { display: none; }
+    .result-card { display: none; animation: fadeIn .2s ease; }
     .result-card.show { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
     .result-body {
-      width: 100%; background: #f7faf1; border: 1px solid #e2e9d3; border-radius: 8px; padding: 12px;
-      font-size: 13px; font-family: inherit; line-height: 1.65; min-height: 130px; margin-bottom: 10px; resize: vertical;
+      width: 100%; background: var(--paper-sunken); border: 1px solid var(--line); border-radius: var(--radius-md);
+      padding: 14px 15px; font-size: 13.5px; font-family: inherit; line-height: 1.7; min-height: 150px;
+      margin-bottom: 12px; resize: vertical; color: var(--ink);
+      transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
     }
-    .field-label { font-size: 12px; font-weight: 700; color: #566253; margin: 0 0 5px; }
-    .result-foot { display: flex; align-items: center; gap: 10px; }
+    .result-body:focus {
+      outline: none; border-color: var(--forest); background: var(--paper); box-shadow: 0 0 0 3px var(--forest-tint);
+    }
+    .field-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin: 0 0 7px; display: flex; align-items: baseline; gap: 6px; }
+    .field-label .muted { font-weight: 400; color: var(--ink-faint); }
+    .result-foot { display: flex; align-items: center; gap: 12px; }
     .result-foot button {
-      font-family: inherit; font-weight: 700; font-size: 13px; padding: 9px 18px;
-      border-radius: 7px; border: none; cursor: pointer;
+      font-family: inherit; font-weight: 700; font-size: 13px; padding: 10px 20px;
+      border-radius: var(--radius-sm); border: none; cursor: pointer; transition: all .15s ease;
     }
-    .result-foot button.primary { background: #1c8a50; color: #fff; }
-    .result-foot button.copy { background: #eef5e4; color: #14201a; }
-    .result-foot .note { font-size: 11px; color: #8a9284; }
+    .result-foot button.primary { background: linear-gradient(135deg, var(--forest), var(--forest-deep)); color: #fff; box-shadow: 0 6px 16px -8px rgba(19,106,61,.7); }
+    .result-foot button.primary:hover { transform: translateY(-1px); box-shadow: 0 10px 20px -8px rgba(19,106,61,.8); }
+    .result-foot button.copy { background: var(--olive-soft); color: var(--forest-deep); }
+    .result-foot button.copy:hover { background: #d9edcb; }
+    .result-foot .note { font-size: 11.5px; color: var(--ink-faint); }
 
-    .empty { color: #8a9284; font-size: 13px; padding: 30px 0; text-align: center; }
+    .empty { color: var(--ink-faint); font-size: 13px; padding: 44px 0; text-align: center; }
+    .empty::before { content: '✎'; display: block; font-size: 22px; margin-bottom: 8px; color: var(--line); }
 
-    /* 설정 탭 */
-    .key-field { margin-bottom: 12px; }
-    .key-field label { display: block; font-size: 12px; font-weight: 700; color: #566253; margin-bottom: 5px; }
+    /* ---------- 설정 탭 ---------- */
+    .key-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin-top: 14px; }
+    @media (max-width: 620px) { .key-grid { grid-template-columns: 1fr; } }
+    .key-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 10px;
+      padding: 10px 13px; background: var(--paper-sunken); border: 1px solid var(--line); border-radius: var(--radius-sm);
+    }
+    .key-row code { font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--ink); }
+    .key-row .req { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+    .key-row .req.must { background: var(--gold-soft); color: var(--gold); }
+    .key-row .req.opt { background: var(--line-soft); color: var(--ink-faint); }
+    .settings-note { font-size: 13px; color: var(--ink-soft); line-height: 1.7; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>율사이트 콘텐츠 자동 생성배포 시스템</h1>
+    <header class="page-head">
+      <div>
+        <p class="eyebrow">OSMU Content Engine</p>
+        <h1>율사이트 콘텐츠 자동 생성배포 시스템</h1>
+        <p class="head-sub">1개의 소스로 인스타그램 · 스레드 · 네이버블로그 · 프릿지매거진 문구를 한 번에 생성합니다</p>
+      </div>
+      <div class="brand-badge">프릿지</div>
+    </header>
 
     <div class="top-tabs">
       <button class="active" data-tab="main">콘텐츠 생성배포</button>
@@ -173,22 +283,22 @@
         <p class="empty" id="emptyMsg">조건을 입력하고 "문구 생성"을 누르면 여기 결과가 표시됩니다.</p>
 
         <div class="result-card" data-c="instagram">
-          <p class="field-label">캡션 <span style="font-weight:400; color:#8a9284;">(확인 후 수정하세요)</span></p>
+          <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요)</span></p>
           <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
           <div class="result-foot"><button class="primary" data-action="publish">인스타그램에 발행</button><span class="note">검토 후 바로 발행</span></div>
         </div>
         <div class="result-card" data-c="threads">
-          <p class="field-label">캡션 <span style="font-weight:400; color:#8a9284;">(확인 후 수정하세요)</span></p>
+          <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요)</span></p>
           <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
           <div class="result-foot"><button class="primary" data-action="publish">스레드에 발행</button><span class="note">검토 후 바로 발행</span></div>
         </div>
         <div class="result-card" data-c="naverBlog">
-          <p class="field-label">본문 <span style="font-weight:400; color:#8a9284;">(확인 후 수정하세요)</span></p>
+          <p class="field-label">본문 <span class="muted">(확인 후 수정하세요)</span></p>
           <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
           <div class="result-foot"><button class="copy" data-action="copy">복사</button><span class="note">복사해서 붙여넣기</span></div>
         </div>
         <div class="result-card" data-c="fridgeMagazine">
-          <p class="field-label">본문 <span style="font-weight:400; color:#8a9284;">(확인 후 수정하세요)</span></p>
+          <p class="field-label">본문 <span class="muted">(확인 후 수정하세요)</span></p>
           <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
           <div class="result-foot"><button class="copy" data-action="copy">복사</button><span class="note">복사해서 붙여넣기</span></div>
         </div>
@@ -199,14 +309,20 @@
     <div id="tab-settings" style="display:none">
       <div class="panel">
         <div class="panel-title">API 연동 상태</div>
-        <p style="font-size:13px; color:#566253; line-height:1.6;">
+        <p class="settings-note">
           실제 키 값은 Apps Script 편집기 → 프로젝트 설정 → 스크립트 속성에서 등록합니다
-          (보안상 이 화면에서는 값을 직접 다루지 않습니다).<br><br>
-          필요한 속성: <code>GEMINI_API_KEY</code>, <code>CLOUDINARY_CLOUD_NAME</code>,
-          <code>CLOUDINARY_API_KEY</code>, <code>CLOUDINARY_API_SECRET</code>,
-          <code>IG_USER_ID</code>, <code>IG_ACCESS_TOKEN</code>,
-          <code>THREADS_USER_ID</code>, <code>THREADS_ACCESS_TOKEN</code>
+          (보안상 이 화면에서는 값을 직접 다루지 않습니다).
         </p>
+        <div class="key-grid">
+          <div class="key-row"><code>GEMINI_API_KEY</code><span class="req must">필수</span></div>
+          <div class="key-row"><code>CLOUDINARY_CLOUD_NAME</code><span class="req opt">발행 시</span></div>
+          <div class="key-row"><code>CLOUDINARY_API_KEY</code><span class="req opt">발행 시</span></div>
+          <div class="key-row"><code>CLOUDINARY_API_SECRET</code><span class="req opt">발행 시</span></div>
+          <div class="key-row"><code>IG_USER_ID</code><span class="req opt">인스타 발행</span></div>
+          <div class="key-row"><code>IG_ACCESS_TOKEN</code><span class="req opt">인스타 발행</span></div>
+          <div class="key-row"><code>THREADS_USER_ID</code><span class="req opt">스레드 발행</span></div>
+          <div class="key-row"><code>THREADS_ACCESS_TOKEN</code><span class="req opt">스레드 발행</span></div>
+        </div>
       </div>
     </div>
   </div>
