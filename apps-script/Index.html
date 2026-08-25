@@ -101,6 +101,19 @@
     h1 { font-family: "Gowun Batang", Georgia, serif; font-weight: 700; font-size: 27px; color: var(--ink); margin: 0; letter-spacing: -.01em; }
     .head-sub { font-size: 12.5px; color: var(--ink-faint); margin: 7px 0 0; }
 
+    /* ---------- 사용 안내 배너 ---------- */
+    .guide-banner {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px;
+      background: var(--olive-soft); border: 1px solid #cdeac6; border-radius: var(--radius-md);
+      padding: 12px 16px; margin-bottom: 20px; font-size: 12.5px; color: var(--accent-deep);
+    }
+    .guide-step { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+    .guide-step b { font-family: "Gowun Batang", serif; }
+    .guide-arrow { color: #9cc79c; font-weight: 700; }
+    .guide-auto { font-weight: 700; background: #fff; padding: 1px 7px; border-radius: 999px; color: var(--accent-deep); }
+    .guide-semi { font-weight: 700; background: #fff; padding: 1px 7px; border-radius: 999px; color: var(--gold); }
+    @media (max-width: 720px) { .guide-banner { font-size: 11.5px; } }
+
     /* ---------- 대시보드 통계 스트립 ---------- */
     .stats-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
     @media (max-width: 620px) { .stats-strip { grid-template-columns: 1fr 1fr; } }
@@ -155,6 +168,7 @@
     .field { margin-bottom: 16px; }
     .field:last-child { margin-bottom: 0; }
     .field label { display: block; font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; letter-spacing: .01em; }
+    .field-hint { font-weight: 400; font-size: 10.5px; color: var(--ink-faint); margin-left: 4px; }
     input[type="text"], textarea {
       width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: var(--radius-sm);
       font-size: 13.5px; font-family: inherit; background: var(--paper-sunken); color: var(--ink);
@@ -211,6 +225,9 @@
     .result-foot button.copy { background: var(--olive-soft); color: var(--accent-deep); }
     .result-foot button.copy:hover { background: #d3f2cd; }
     .result-foot .note { font-size: 11.5px; color: var(--ink-faint); }
+    .char-count { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--ink-faint); white-space: nowrap; }
+    .char-count.warn { color: var(--gold); font-weight: 700; }
+    .char-count.over { color: var(--danger); font-weight: 700; }
 
     .empty { color: var(--ink-faint); font-size: 13px; padding: 44px 0; text-align: center; }
     .empty::before { content: '✎'; display: block; font-size: 22px; margin-bottom: 8px; color: var(--line); }
@@ -272,6 +289,16 @@
           </div>
         </div>
 
+        <div class="guide-banner">
+          <span class="guide-step"><b>①</b> 사진 올리기</span>
+          <span class="guide-arrow">→</span>
+          <span class="guide-step"><b>②</b> 조건 입력하기</span>
+          <span class="guide-arrow">→</span>
+          <span class="guide-step"><b>③</b> 문구 생성 후 내용 확인·수정</span>
+          <span class="guide-arrow">→</span>
+          <span class="guide-step"><b>④</b> <span class="guide-auto">자동</span> 채널은 바로 발행, <span class="guide-semi">복사</span> 채널은 복사해서 붙여넣기</span>
+        </div>
+
         <!-- ===== 콘텐츠 생성배포 탭 ===== -->
         <div id="tab-main">
           <div class="panel">
@@ -285,12 +312,21 @@
             <div class="panel-title"><span class="step-num">2</span>콘텐츠 조건 입력</div>
             <div class="grid2">
               <div class="field">
-                <label>콘텐츠 유형</label>
-                <input type="text" id="contentType" placeholder="예: 입점사 소개">
+                <label>콘텐츠 유형 <span class="field-hint">직접 입력 또는 목록에서 선택</span></label>
+                <input type="text" id="contentType" list="contentTypeList" placeholder="예: 입점사 소개" autocomplete="off">
+                <datalist id="contentTypeList">
+                  <option value="입점사 소개">
+                  <option value="신상품 소개">
+                  <option value="프로모션/할인 안내">
+                  <option value="시즌/이벤트 콘텐츠">
+                  <option value="ESG 스토리">
+                  <option value="고객 후기/리뷰">
+                </datalist>
               </div>
               <div class="field">
-                <label>대상 (브랜드/상품/프로그램)</label>
-                <input type="text" id="targetBrand" placeholder="예: ○○공방">
+                <label>대상 (브랜드/상품/프로그램) <span class="field-hint">직접 입력 또는 목록에서 선택</span></label>
+                <input type="text" id="targetBrand" list="targetBrandList" placeholder="예: ○○공방" autocomplete="off">
+                <datalist id="targetBrandList"></datalist>
               </div>
             </div>
             <div class="field">
@@ -299,8 +335,15 @@
             </div>
             <div class="grid2">
               <div class="field">
-                <label>분위기</label>
-                <input type="text" id="tone" placeholder="예: 따뜻하고 담백하게">
+                <label>분위기 <span class="field-hint">직접 입력 또는 목록에서 선택</span></label>
+                <input type="text" id="tone" list="toneList" placeholder="예: 따뜻하고 담백하게" autocomplete="off">
+                <datalist id="toneList">
+                  <option value="따뜻하고 담백하게">
+                  <option value="발랄하고 경쾌하게">
+                  <option value="차분하고 신뢰감 있게">
+                  <option value="친근하고 캐주얼하게">
+                  <option value="정중하고 격식있게">
+                </datalist>
               </div>
               <div class="field">
                 <label>메모 (선택)</label>
@@ -316,10 +359,10 @@
           <div class="panel">
             <div class="panel-title"><span class="step-num">3</span>채널별 문구 생성 · 발행</div>
             <div class="chan-tabs" id="chanTabs">
-              <button class="active" data-c="instagram">인스타그램 <span class="tag auto">자동</span></button>
-              <button data-c="threads">스레드 <span class="tag auto">자동</span></button>
-              <button data-c="naverBlog">네이버 블로그 <span class="tag semi">복사</span></button>
-              <button data-c="fridgeMagazine">프릿지 <span class="tag semi">복사</span></button>
+              <button class="active" data-c="instagram">인스타그램 <span class="tag auto" title="버튼 클릭 시 바로 발행됩니다">자동</span></button>
+              <button data-c="threads">스레드 <span class="tag auto" title="버튼 클릭 시 바로 발행됩니다">자동</span></button>
+              <button data-c="naverBlog">네이버 블로그 <span class="tag semi" title="복사 버튼으로 복사한 뒤 직접 붙여넣어야 합니다">복사</span></button>
+              <button data-c="fridgeMagazine">프릿지 <span class="tag semi" title="복사 버튼으로 복사한 뒤 직접 붙여넣어야 합니다">복사</span></button>
             </div>
 
             <button id="generateBtn">문구 생성 / 다시 생성</button>
@@ -329,23 +372,39 @@
 
             <div class="result-card" data-c="instagram">
               <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요)</span></p>
-              <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
-              <div class="result-foot"><button class="primary" data-action="publish">인스타그램에 발행</button><span class="note">검토 후 바로 발행</span></div>
+              <textarea class="result-body" data-limit="300" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
+              <div class="result-foot">
+                <button class="primary" data-action="publish">인스타그램에 발행</button>
+                <span class="note">검토 후 바로 발행</span>
+                <span class="char-count" data-limit="300">0 / 300자</span>
+              </div>
             </div>
             <div class="result-card" data-c="threads">
               <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요)</span></p>
-              <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
-              <div class="result-foot"><button class="primary" data-action="publish">스레드에 발행</button><span class="note">검토 후 바로 발행</span></div>
+              <textarea class="result-body" data-limit="300" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
+              <div class="result-foot">
+                <button class="primary" data-action="publish">스레드에 발행</button>
+                <span class="note">검토 후 바로 발행</span>
+                <span class="char-count" data-limit="300">0 / 300자</span>
+              </div>
             </div>
             <div class="result-card" data-c="naverBlog">
               <p class="field-label">본문 <span class="muted">(확인 후 수정하세요)</span></p>
-              <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
-              <div class="result-foot"><button class="copy" data-action="copy">복사</button><span class="note">복사해서 붙여넣기</span></div>
+              <textarea class="result-body" data-limit="2000" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
+              <div class="result-foot">
+                <button class="copy" data-action="copy">복사</button>
+                <span class="note">복사해서 붙여넣기</span>
+                <span class="char-count" data-limit="2000">0 / 2000자</span>
+              </div>
             </div>
             <div class="result-card" data-c="fridgeMagazine">
               <p class="field-label">본문 <span class="muted">(확인 후 수정하세요)</span></p>
-              <textarea class="result-body" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
-              <div class="result-foot"><button class="copy" data-action="copy">복사</button><span class="note">복사해서 붙여넣기</span></div>
+              <textarea class="result-body" data-limit="900" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
+              <div class="result-foot">
+                <button class="copy" data-action="copy">복사</button>
+                <span class="note">복사해서 붙여넣기</span>
+                <span class="char-count" data-limit="900">0 / 900자</span>
+              </div>
             </div>
           </div>
         </div>
@@ -524,7 +583,26 @@
     function renderResult(channel, text) {
       var card = document.querySelector('.result-card[data-c="' + channel + '"] .result-body');
       card.value = text;
+      updateCharCount(channel);
     }
+
+    // ---------- 글자수 카운터 ----------
+    function updateCharCount(channel) {
+      var wrap = document.querySelector('.result-card[data-c="' + channel + '"]');
+      var body = wrap.querySelector('.result-body');
+      var counter = wrap.querySelector('.char-count');
+      var limit = Number(counter.dataset.limit);
+      var len = body.value.length;
+      counter.textContent = len + ' / ' + limit + '자';
+      counter.classList.toggle('over', len > limit);
+      counter.classList.toggle('warn', !(len > limit) && len >= limit * 0.9);
+    }
+    document.querySelectorAll('.result-body').forEach(function (ta) {
+      ta.addEventListener('input', function () {
+        var channel = ta.closest('.result-card').dataset.c;
+        updateCharCount(channel);
+      });
+    });
 
     function getChannelText(channel) {
       var el = document.querySelector('.result-card[data-c="' + channel + '"] .result-body');
