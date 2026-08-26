@@ -279,6 +279,29 @@
     .char-count.warn { color: var(--gold); font-weight: 700; }
     .char-count.over { color: var(--danger); font-weight: 700; }
 
+    /* ---------- 인스타/스레드 미리보기 ---------- */
+    .editor-preview-split { display: grid; grid-template-columns: 1fr 240px; gap: 20px; align-items: start; }
+    @media (max-width: 720px) { .editor-preview-split { grid-template-columns: 1fr; } }
+    .ig-preview {
+      border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden;
+      background: #fff; box-shadow: var(--shadow-sm); font-family: -apple-system, "Noto Sans KR", sans-serif;
+    }
+    .ig-preview-head { display: flex; align-items: center; gap: 8px; padding: 9px 10px; }
+    .ig-avatar {
+      width: 26px; height: 26px; border-radius: 50%; flex: none;
+      background: linear-gradient(135deg, #feda75, #d62976 60%, #4f5bd5);
+    }
+    .ig-username { font-size: 12px; font-weight: 700; color: var(--ink); }
+    .ig-preview-photo {
+      width: 100%; aspect-ratio: 1 / 1; background: var(--paper-sunken); object-fit: cover; display: block;
+    }
+    .ig-preview-photo.empty {
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      font-size: 11px; color: var(--ink-faint); padding: 10px; line-height: 1.5;
+    }
+    .ig-preview-caption { padding: 8px 10px 12px; font-size: 12px; line-height: 1.55; color: var(--ink); white-space: pre-wrap; max-height: 140px; overflow-y: auto; }
+    .ig-preview-caption b { margin-right: 4px; }
+
     .empty { color: var(--ink-faint); font-size: 13px; padding: 44px 0; text-align: center; }
     .empty::before { content: '✎'; display: block; font-size: 22px; margin-bottom: 8px; color: var(--line); }
 
@@ -429,21 +452,39 @@
             <div class="selected-items" id="selectedItems"></div>
 
             <div class="result-card" data-c="instagram">
-              <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요)</span></p>
-              <textarea class="result-body" data-limit="300" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
-              <div class="result-foot">
-                <button class="primary" data-action="publish">인스타그램에 발행</button>
-                <span class="note">검토 후 바로 발행</span>
-                <span class="char-count" data-limit="300">0 / 300자</span>
+              <div class="editor-preview-split">
+                <div>
+                  <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요)</span></p>
+                  <textarea class="result-body" data-limit="300" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
+                  <div class="result-foot">
+                    <button class="primary" data-action="publish">인스타그램에 발행</button>
+                    <span class="note">검토 후 바로 발행</span>
+                    <span class="char-count" data-limit="300">0 / 300자</span>
+                  </div>
+                </div>
+                <div class="ig-preview" data-c="instagram">
+                  <div class="ig-preview-head"><span class="ig-avatar"></span><span class="ig-username">f_ridge.com.official</span></div>
+                  <div class="ig-preview-photo empty">대표 사진을 등록하면<br>여기에 표시됩니다</div>
+                  <div class="ig-preview-caption"><b>f_ridge.com.official</b> <span class="ig-cap-text">문구를 생성하면 여기 미리보기가 채워집니다.</span></div>
+                </div>
               </div>
             </div>
             <div class="result-card" data-c="threads">
-              <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요)</span></p>
-              <textarea class="result-body" data-limit="300" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
-              <div class="result-foot">
-                <button class="primary" data-action="publish">스레드에 발행</button>
-                <span class="note">검토 후 바로 발행</span>
-                <span class="char-count" data-limit="300">0 / 300자</span>
+              <div class="editor-preview-split">
+                <div>
+                  <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요)</span></p>
+                  <textarea class="result-body" data-limit="300" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
+                  <div class="result-foot">
+                    <button class="primary" data-action="publish">스레드에 발행</button>
+                    <span class="note">검토 후 바로 발행</span>
+                    <span class="char-count" data-limit="300">0 / 300자</span>
+                  </div>
+                </div>
+                <div class="ig-preview" data-c="threads">
+                  <div class="ig-preview-head"><span class="ig-avatar"></span><span class="ig-username">f_ridge.com.official</span></div>
+                  <div class="ig-preview-photo empty">대표 사진을 등록하면<br>여기에 표시됩니다</div>
+                  <div class="ig-preview-caption"><b>f_ridge.com.official</b> <span class="ig-cap-text">문구를 생성하면 여기 미리보기가 채워집니다.</span></div>
+                </div>
               </div>
             </div>
             <div class="result-card" data-c="naverBlog">
@@ -584,6 +625,33 @@
           updateStats();
         });
       });
+      updatePreviewPhoto();
+    }
+
+    // ---------- 인스타/스레드 미리보기 ----------
+    function updatePreviewPhoto() {
+      var repPhoto = state.photos.length ? state.photos[0].dataUrl : null;
+      document.querySelectorAll('.ig-preview').forEach(function (prev) {
+        var photoEl = prev.querySelector('.ig-preview-photo');
+        if (repPhoto) {
+          photoEl.classList.remove('empty');
+          photoEl.innerHTML = '';
+          photoEl.style.backgroundImage = 'url(' + repPhoto + ')';
+          photoEl.style.backgroundSize = 'cover';
+          photoEl.style.backgroundPosition = 'center';
+        } else {
+          photoEl.classList.add('empty');
+          photoEl.style.backgroundImage = '';
+          photoEl.innerHTML = '대표 사진을 등록하면<br>여기에 표시됩니다';
+        }
+      });
+    }
+    function updatePreviewCaption(channel) {
+      var card = document.querySelector('.result-card[data-c="' + channel + '"]');
+      if (!card) return;
+      var prev = card.querySelector('.ig-preview .ig-cap-text');
+      var body = card.querySelector('.result-body');
+      if (prev && body) prev.textContent = body.value || '문구를 생성하면 여기 미리보기가 채워집니다.';
     }
 
     // ---------- 채널 탭 ----------
@@ -690,6 +758,7 @@
       var card = document.querySelector('.result-card[data-c="' + channel + '"] .result-body');
       card.value = text;
       updateCharCount(channel);
+      updatePreviewCaption(channel);
     }
 
     function renderKeywords(keywords) {
@@ -720,6 +789,7 @@
       ta.addEventListener('input', function () {
         var channel = ta.closest('.result-card').dataset.c;
         updateCharCount(channel);
+        updatePreviewCaption(channel);
       });
     });
 
@@ -823,6 +893,8 @@
       renderPhotos();
       document.querySelectorAll('.result-body').forEach(function (ta) { ta.value = ''; });
       document.querySelectorAll('.result-keywords').forEach(function (el) { el.value = ''; });
+      updatePreviewCaption('instagram');
+      updatePreviewCaption('threads');
       document.getElementById('selectedItems').innerHTML = '';
       document.querySelectorAll('.result-card').forEach(function (c) { c.classList.remove('show'); });
       document.getElementById('emptyMsg').style.display = '';

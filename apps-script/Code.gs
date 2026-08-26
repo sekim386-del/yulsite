@@ -284,7 +284,14 @@ function buildPrompt_(input, rules, listing, reference) {
   lines.push('  "naverBlog": { "title": "SEO를 고려한 제목", "body": "아래 [naverBlog.body 작성 규칙]을 지켜 작성한 본문" },');
   lines.push('  "fridgeMagazine": { "title": "매거진 제목", "body": "매거진 본문", "keywords": ["SEO 키워드1", "SEO 키워드2"] }');
   lines.push('}');
-  lines.push('인스타그램·스레드는 300자 이내 짧은 문구로 작성하세요.');
+  lines.push('');
+  lines.push('=== instagram / threads 캡션 작성 규칙 (반드시 지킬 것) ===');
+  lines.push('1. 첫 문장은 스크롤을 멈추게 하는 "후킹 문장"으로 시작할 것 (질문형, 공감형, 의외성 중 하나).');
+  lines.push('2. 문장은 짧게 끊어 쓰고, 문단 사이에 줄바꿈을 넣어 모바일에서 읽기 편하게 할 것.');
+  lines.push('3. 이모지를 문장 포인트마다 자연스럽게 사용할 것 (과하지 않게, 2~5개 내외).');
+  lines.push('4. 전체 300자 이내로 작성하되, 마지막 줄에는 저장/공유/링크클릭 등을 유도하는 짧은 CTA(행동 유도 문구)를 넣을 것.');
+  lines.push('5. hashtags는 5~10개: 브랜드 태그(#프릿지 #가치소비) + 카테고리 태그(친환경/제로웨이스트/업사이클/비건/동물복지 중 관련된 것) + 주제 특화 태그를 섞어서 구성할 것.');
+  lines.push('6. threads 캡션은 instagram보다 조금 더 담백하고 대화체로, 스레드 특유의 가벼운 톤으로 쓸 것.');
   lines.push('');
   lines.push('=== naverBlog.body 작성 규칙 (매우 중요, 반드시 모두 지킬 것) ===');
   lines.push('이 상품(프로그램)의 판매·참여 증대를 목표로 구매욕을 자극하는 블로그 글을 쓴다. SEO, AEO, GEO를 고려해 네이버·구글·AI 검색에서 상위노출/추천될 수 있게 작성한다.');
