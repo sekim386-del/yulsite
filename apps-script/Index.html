@@ -889,7 +889,9 @@
         document.getElementById('threadsAuthStatus').textContent = '연동 링크 생성 중...';
         google.script.run
           .withSuccessHandler(function (url) {
-            document.getElementById('threadsAuthStatus').textContent = '새 탭에서 로그인 승인을 진행해주세요.';
+            document.getElementById('threadsAuthStatus').innerHTML =
+              '새 탭에서 로그인 승인을 진행해주세요. (PC에서 안 되면 아래 링크를 복사해서 휴대폰 브라우저에 붙여넣어 열어보세요 — 인스타그램 앱에 이미 로그인되어 있으면 더 잘 될 수 있습니다)<br>' +
+              '<code style="word-break:break-all;">' + url + '</code>';
             window.open(url, '_blank');
           })
           .withFailureHandler(function (err) {
