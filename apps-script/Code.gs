@@ -19,7 +19,7 @@
  *    생성된 URL을 열면 바로 사용 가능합니다.
  */
 
-var GEMINI_MODEL = 'gemini-2.0-flash';
+var GEMINI_MODEL = 'gemini-3.6-flash';
 
 function getProp_(name) {
   return PropertiesService.getScriptProperties().getProperty(name);
