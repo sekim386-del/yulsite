@@ -56,6 +56,15 @@
 | `THREADS_USER_ID` | 🔲 미등록 |
 | `THREADS_ACCESS_TOKEN` | 🔲 미등록 |
 
+## 8/26 진행 상황 — 스레드 연동 (일시 중단)
+
+- ✅ Meta 앱에 Threads API 이용 사례 추가, `threads_basic`/`threads_content_publish` 권한 등록
+- ✅ 앱스크립트에 스레드 OAuth 자동화 기능 구현 완료 (Code.gs의 `getThreadsAuthUrl`/`handleThreadsOAuthCallback_`, 웹앱 설정 탭의 "①리디렉션 URI 확인 / ②스레드 연동 시작" 버튼)
+- ✅ `THREADS_APP_ID`(741576225717795), `THREADS_APP_SECRET` 스크립트 속성 등록 완료
+- ✅ Meta 쪽 앱 도메인(`script.google.com`)·리디렉션/제거/삭제 콜백 URL 등록 완료
+- 🔲 **막힌 지점**: `f_ridge.com.official` 계정 로그인 시 "문제가 발생했습니다" 반복 — PC/휴대폰 모두, 비밀번호 재설정(계정 찾기)도 오류남. 오늘 반복 시도로 계정이 일시 잠긴 것으로 추정됨.
+- **다음에 재시도할 때**: 몇 시간~하루 정도 쉬었다가 인스타그램 **앱**(웹 아니고)에서 비밀번호 재설정 먼저 시도 → 성공하면 웹앱 설정 탭 "② 스레드 연동 시작"으로 재시도. 이미 구현된 자동화 코드는 그대로 재사용 가능 (다시 만들 필요 없음).
+
 ## 오늘 겪은 문제들 (참고용 — 재발 시 빠르게 원인 파악용)
 
 - **스크립트 속성 이름 오타**: `GEMINI_API_KEY` 저장할 때 띄어쓰기가 섞여 들어가서("GEMINI_API_ KEY") 인식 안 됐던 적 있음 → 속성 이름 저장 후 꼭 재확인
