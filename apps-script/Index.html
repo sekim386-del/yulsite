@@ -488,6 +488,21 @@
               <div class="key-row"><code>THREADS_ACCESS_TOKEN</code><span class="req opt">스레드 발행</span></div>
             </div>
           </div>
+
+          <div class="panel">
+            <div class="panel-title">스레드(Threads) 연동</div>
+            <p class="settings-note">
+              1) 스크립트 속성에 <code>THREADS_APP_ID</code>, <code>THREADS_APP_SECRET</code>을 먼저 등록하세요
+              (Meta 앱 대시보드 → 이용 사례 → Threads API 액세스 → 설정 탭에서 확인).<br>
+              2) 아래 "리디렉션 URI 확인" 버튼으로 나온 주소를 그 설정 탭의 리디렉션 URI 등록란에 추가하세요.<br>
+              3) "스레드 연동 시작" 버튼을 눌러 로그인 승인하면 토큰이 자동 저장됩니다.
+            </p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;">
+              <button class="reset-btn" id="showRedirectBtn" type="button">① 리디렉션 URI 확인</button>
+              <button class="reset-btn" id="startThreadsAuthBtn" type="button" style="background:var(--accent-deep); color:#fff; border-color:var(--accent-deep);">② 스레드 연동 시작</button>
+            </div>
+            <p class="status" id="threadsAuthStatus" style="margin-top:10px;"></p>
+          </div>
         </div>
       </div>
     </main>
@@ -851,6 +866,38 @@
     restoreDraft();
     updateStats();
     loadHistory();
+
+    // ---------- 스레드 연동 ----------
+    var threadsBtn = document.getElementById('showRedirectBtn');
+    var startThreadsBtn = document.getElementById('startThreadsAuthBtn');
+    if (threadsBtn) {
+      threadsBtn.addEventListener('click', function () {
+        document.getElementById('threadsAuthStatus').textContent = '확인 중...';
+        google.script.run
+          .withSuccessHandler(function (url) {
+            document.getElementById('threadsAuthStatus').innerHTML =
+              '이 주소를 복사해서 Meta 설정 탭 리디렉션 URI에 등록하세요: <br><code style="word-break:break-all;">' + url + '</code>';
+          })
+          .withFailureHandler(function (err) {
+            document.getElementById('threadsAuthStatus').textContent = '오류: ' + err.message;
+          })
+          .getWebAppUrl();
+      });
+    }
+    if (startThreadsBtn) {
+      startThreadsBtn.addEventListener('click', function () {
+        document.getElementById('threadsAuthStatus').textContent = '연동 링크 생성 중...';
+        google.script.run
+          .withSuccessHandler(function (url) {
+            document.getElementById('threadsAuthStatus').textContent = '새 탭에서 로그인 승인을 진행해주세요.';
+            window.open(url, '_blank');
+          })
+          .withFailureHandler(function (err) {
+            document.getElementById('threadsAuthStatus').textContent = '오류: ' + err.message;
+          })
+          .getThreadsAuthUrl();
+      });
+    }
   </script>
 </body>
 </html>

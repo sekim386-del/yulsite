@@ -67,7 +67,18 @@ function loadBrandRules_() {
   return rules;
 }
 
-function doGet() {
+function doGet(e) {
+  if (e && e.parameter && e.parameter.code) {
+    return handleThreadsOAuthCallback_(e.parameter.code);
+  }
+  if (e && e.parameter && e.parameter.error) {
+    return HtmlService.createHtmlOutput(
+      '<div style="font-family:sans-serif;padding:40px;text-align:center;">' +
+      '<h2>❌ 스레드 연동이 취소되었습니다</h2>' +
+      '<p>' + (e.parameter.error_description || e.parameter.error) + '</p>' +
+      '</div>'
+    );
+  }
   return HtmlService.createTemplateFromFile('Index')
     .evaluate()
     .setTitle('프릿지 OSMU 콘텐츠 엔진')
@@ -77,6 +88,76 @@ function doGet() {
 
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+/**
+ * ===== 스레드(Threads) 연동 — 로그인 승인 1번으로 토큰 자동 발급 =====
+ * 사전 준비: 스크립트 속성에 THREADS_APP_ID, THREADS_APP_SECRET 등록
+ *           (Meta 앱 대시보드 → 이용 사례 → Threads API 액세스 → 설정 탭에서 확인)
+ * 그리고 그 "설정" 탭의 리디렉션 URI 등록란에 이 웹앱의 URL을 추가해야 합니다.
+ * 웹앱 URL은 getThreadsAuthUrl()이 알려주는 값과 동일합니다.
+ */
+function getThreadsAuthUrl() {
+  var clientId = requireProp_('THREADS_APP_ID', '스레드 앱 ID');
+  var redirectUri = ScriptApp.getService().getUrl();
+  return 'https://threads.net/oauth/authorize'
+    + '?client_id=' + encodeURIComponent(clientId)
+    + '&redirect_uri=' + encodeURIComponent(redirectUri)
+    + '&scope=threads_basic,threads_content_publish'
+    + '&response_type=code';
+}
+
+/** 지금 이 웹앱의 실제 배포 URL을 반환 — Meta 쪽 "리디렉션 URI" 등록에 그대로 붙여넣을 값 */
+function getWebAppUrl() {
+  return ScriptApp.getService().getUrl();
+}
+
+function handleThreadsOAuthCallback_(code) {
+  try {
+    var clientId = requireProp_('THREADS_APP_ID', '스레드 앱 ID');
+    var clientSecret = requireProp_('THREADS_APP_SECRET', '스레드 앱 시크릿');
+    var redirectUri = ScriptApp.getService().getUrl();
+
+    var tokenRes = UrlFetchApp.fetch('https://graph.threads.net/oauth/access_token', {
+      method: 'post',
+      muteHttpExceptions: true,
+      payload: {
+        client_id: clientId,
+        client_secret: clientSecret,
+        grant_type: 'authorization_code',
+        redirect_uri: redirectUri,
+        code: code
+      }
+    });
+    var tokenData = JSON.parse(tokenRes.getContentText());
+    if (!tokenData.access_token) {
+      return HtmlService.createHtmlOutput(
+        '<div style="font-family:sans-serif;padding:40px;">' +
+        '<h2>❌ 1단계(코드→토큰 교환) 실패</h2><pre>' + tokenRes.getContentText() + '</pre></div>'
+      );
+    }
+
+    var longRes = UrlFetchApp.fetch(
+      'https://graph.threads.net/access_token?grant_type=th_exchange_token'
+      + '&client_secret=' + encodeURIComponent(clientSecret)
+      + '&access_token=' + encodeURIComponent(tokenData.access_token)
+    );
+    var longData = JSON.parse(longRes.getContentText());
+    var finalToken = longData.access_token || tokenData.access_token;
+
+    PropertiesService.getScriptProperties().setProperty('THREADS_ACCESS_TOKEN', finalToken);
+    PropertiesService.getScriptProperties().setProperty('THREADS_USER_ID', String(tokenData.user_id));
+
+    return HtmlService.createHtmlOutput(
+      '<div style="font-family:sans-serif;padding:40px;text-align:center;">' +
+      '<h2>✅ 스레드 연동 완료!</h2>' +
+      '<p>THREADS_USER_ID: ' + tokenData.user_id + '</p>' +
+      '<p>토큰이 스크립트 속성에 자동 저장되었습니다. 이 창은 닫으셔도 됩니다.</p>' +
+      '</div>'
+    );
+  } catch (err) {
+    return HtmlService.createHtmlOutput('<pre>오류: ' + err.message + '</pre>');
+  }
 }
 
 var PRODUCT_LIST_URLS_ = {
