@@ -80,8 +80,14 @@
     .side-history-title { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-faint); margin: 0 0 10px; }
     .history-list { display: flex; flex-direction: column; gap: 8px; }
     .history-empty { font-size: 11.5px; color: var(--ink-faint); }
-    .history-item { padding: 8px 10px; background: var(--paper-sunken); border-radius: 9px; border: 1px solid var(--line-soft); }
+    .history-item { position: relative; padding: 8px 24px 8px 10px; background: var(--paper-sunken); border-radius: 9px; border: 1px solid var(--line-soft); }
     .history-item .h-type { font-size: 11.5px; font-weight: 700; color: var(--ink); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .history-item .h-hide {
+      position: absolute; top: 6px; right: 7px; width: 15px; height: 15px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 11px; line-height: 1;
+      color: var(--ink-faint); cursor: pointer; transition: all .15s ease;
+    }
+    .history-item .h-hide:hover { background: var(--danger); color: #fff; }
     .history-item .h-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 3px; }
     .history-item .h-date { font-size: 10px; color: var(--ink-faint); font-family: "JetBrains Mono", monospace; }
     .history-item .h-status { font-size: 9.5px; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: var(--olive-soft); color: var(--accent-deep); }
@@ -855,21 +861,40 @@
     }
 
     // ---------- 최근 작업 이력 (대시보드) ----------
+    var HIDDEN_HISTORY_KEY = 'yulsite_hidden_history_ids';
+    function getHiddenHistoryIds() {
+      try { return JSON.parse(localStorage.getItem(HIDDEN_HISTORY_KEY) || '[]'); }
+      catch (e) { return []; }
+    }
+    function hideHistoryItem(id) {
+      try {
+        var hidden = getHiddenHistoryIds();
+        if (hidden.indexOf(id) === -1) hidden.push(id);
+        localStorage.setItem(HIDDEN_HISTORY_KEY, JSON.stringify(hidden));
+      } catch (e) { /* localStorage 사용 불가 시 조용히 무시 */ }
+      loadHistory();
+    }
     function loadHistory() {
-      google.script.run.withSuccessHandler(renderHistory).withFailureHandler(function () {}).getRecentHistory(6);
+      google.script.run.withSuccessHandler(renderHistory).withFailureHandler(function () {}).getRecentHistory(10);
     }
     function renderHistory(list) {
       var wrap = document.getElementById('historyList');
-      if (!list || !list.length) { wrap.innerHTML = '<p class="history-empty">아직 생성 이력이 없습니다.</p>'; return; }
+      var hidden = getHiddenHistoryIds();
+      list = (list || []).filter(function (h) { return hidden.indexOf(h.id) === -1; });
+      if (!list.length) { wrap.innerHTML = '<p class="history-empty">아직 생성 이력이 없습니다.</p>'; return; }
       wrap.innerHTML = list.map(function (h) {
         var d = h.date ? new Date(h.date) : null;
         var dateStr = d ? (d.getMonth() + 1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') : '';
         var statusClass = h.status === '대기' ? 'pending' : '';
         return '<div class="history-item">' +
           '<span class="h-type">' + escapeHtml(h.targetBrand || h.contentType || '(제목 없음)') + '</span>' +
+          '<span class="h-hide" data-id="' + escapeHtml(h.id) + '" title="화면에서만 숨기기 (기록은 시트에 그대로 남음)">×</span>' +
           '<div class="h-meta"><span class="h-date">' + dateStr + '</span><span class="h-status ' + statusClass + '">' + escapeHtml(h.status || '대기') + '</span></div>' +
           '</div>';
       }).join('');
+      wrap.querySelectorAll('.h-hide').forEach(function (el) {
+        el.addEventListener('click', function () { hideHistoryItem(el.dataset.id); });
+      });
     }
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, function (c) {
