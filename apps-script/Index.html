@@ -403,6 +403,10 @@
               <label>그 외 추가 반영사항 <span class="field-hint">선택사항</span></label>
               <input type="text" id="extraNotes" placeholder="추가로 반영할 내용이 있으면 적어주세요">
             </div>
+            <div class="field">
+              <label>참고 자료 URL <span class="field-hint">선택사항 · 정확한 상품/프로그램 페이지를 알고 있으면 입력</span></label>
+              <input type="text" id="referenceUrl" placeholder="https://f-ridge.com/products/... (입력 시 목록 검색 대신 이 페이지 내용을 우선 사용)">
+            </div>
           </div>
 
           <div class="panel">
@@ -606,7 +610,8 @@
         itemCount: Number(document.getElementById('itemCount').value) || 1,
         itemType: getItemType(),
         tone: document.getElementById('tone').value.trim() || undefined,
-        extraNotes: document.getElementById('extraNotes').value.trim() || undefined
+        extraNotes: document.getElementById('extraNotes').value.trim() || undefined,
+        referenceUrl: document.getElementById('referenceUrl').value.trim() || undefined
       };
       if (!input.topic) {
         setStatus('콘텐츠 주제를 입력해주세요.', true);
@@ -652,7 +657,7 @@
 
       var note = '생성 완료. 검토 후 발행/복사하세요.';
       if (data.listing && !data.listing.fetched) {
-        note += ' (상품/프로그램 목록을 가져오지 못해 구체적 상품명 없이 작성됨)';
+        note += ' (참고 자료를 가져오지 못해 구체적 상품명 없이 작성됨)';
       }
       setStatus(note);
       loadHistory();
@@ -790,7 +795,7 @@
     // ---------- 새 콘텐츠 시작 (초기화) ----------
     document.getElementById('resetBtn').addEventListener('click', function () {
       if (!confirm('입력한 내용과 결과를 모두 지우고 새로 시작할까요?')) return;
-      ['topic', 'tone', 'extraNotes'].forEach(function (id) {
+      ['topic', 'tone', 'extraNotes', 'referenceUrl'].forEach(function (id) {
         document.getElementById(id).value = '';
       });
       document.getElementById('itemCount').value = 1;
@@ -813,7 +818,7 @@
 
     // ---------- 임시 저장 (새로고침해도 입력값 유지) ----------
     var DRAFT_KEY = 'yulsite_osmu_draft_v2';
-    var DRAFT_FIELDS = ['topic', 'itemCount', 'tone', 'extraNotes'];
+    var DRAFT_FIELDS = ['topic', 'itemCount', 'tone', 'extraNotes', 'referenceUrl'];
     function saveDraft() {
       try {
         var draft = {};

@@ -124,7 +124,41 @@ function fetchListingLinks_(itemType) {
   }
 }
 
-function buildPrompt_(input, rules, listing) {
+/**
+ * 사용자가 직접 지정한 URL(상품/프로그램 상세페이지 등)을 열람해 본문 텍스트를 추출합니다.
+ * 목록 페이지 크롤링(fetchListingLinks_)보다 훨씬 정확 — 정확한 URL을 아는 경우 이걸 우선 사용합니다.
+ */
+function fetchReferencePage_(pageUrl) {
+  try {
+    var res = UrlFetchApp.fetch(pageUrl, {
+      muteHttpExceptions: true,
+      followRedirects: true,
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; YulsiteContentBot/1.0)' }
+    });
+    if (res.getResponseCode() !== 200) return { fetched: false, reason: 'http_' + res.getResponseCode() };
+
+    var html = res.getContentText();
+    var titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    var title = titleMatch ? titleMatch[1].replace(/\s+/g, ' ').trim() : '';
+
+    var text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<!--[\s\S]*?-->/g, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 4000);
+
+    if (!text) return { fetched: false, reason: 'empty_page' };
+    return { fetched: true, text: text, title: title, url: pageUrl };
+  } catch (e) {
+    return { fetched: false, reason: 'fetch_failed' };
+  }
+}
+
+function buildPrompt_(input, rules, listing, reference) {
   var itemTypeLabel = input.itemType === 'program' ? '프로그램' : '상품';
   var itemCount = Number(input.itemCount) > 0 ? Number(input.itemCount) : 1;
 
@@ -143,7 +177,16 @@ function buildPrompt_(input, rules, listing) {
   if (input.tone) lines.push('[분위기/톤] ' + input.tone);
   lines.push('');
 
-  if (listing && listing.fetched && listing.items.length) {
+  if (reference && reference.fetched) {
+    lines.push('사용자가 아래 URL을 직접 지정했습니다 — 목록에서 고를 필요 없이 이 자료를 최우선으로 사용하세요:');
+    lines.push('URL: ' + reference.url);
+    if (reference.title) lines.push('페이지 제목: ' + reference.title);
+    lines.push('페이지 내용(참고용, 과장/오류 없이 반영):');
+    lines.push(reference.text);
+    lines.push('이 자료를 바탕으로 selectedItems에 {"name": 위 페이지에서 파악한 실제 이름, "url": "' + reference.url + '"} 형태로 넣고, 콘텐츠에도 반영하세요.');
+  } else if (input.referenceUrl) {
+    lines.push('(사용자가 지정한 참고 URL(' + input.referenceUrl + ')을 열람하지 못했습니다. selectedItems는 빈 배열로 두고, 구체적 정보를 지어내지 말고 주제만으로 일반적으로 작성하세요.)');
+  } else if (listing && listing.fetched && listing.items.length) {
     lines.push('아래는 f-ridge.com ' + itemTypeLabel + ' 목록 페이지에서 가져온 후보 목록입니다 (이름 : 링크):');
     listing.items.forEach(function (it) { lines.push('- ' + it.text + ' : ' + it.url); });
     lines.push('위 후보 중에서 주제에 가장 잘 맞는 것을 정확히 ' + itemCount + '개 골라 selectedItems에 넣고, 아래 콘텐츠 본문에도 반영하세요.');
@@ -210,15 +253,21 @@ function normalizeChannels_(raw) {
 
 /**
  * 프런트에서 호출하는 메인 함수 — 1번의 입력으로 4채널 콘텐츠를 생성합니다.
- * input: { topic, itemCount, itemType ('product'|'program'), extraNotes, tone }
+ * input: { topic, itemCount, itemType ('product'|'program'), extraNotes, tone, referenceUrl }
  */
 function generateContent(input) {
   var apiKey = requireProp_('GEMINI_API_KEY', 'Gemini API 키');
   var rules = loadBrandRules_();
 
-  var listing = fetchListingLinks_(input.itemType);
+  var listing = null;
+  var reference = null;
+  if (input.referenceUrl) {
+    reference = fetchReferencePage_(input.referenceUrl);
+  } else {
+    listing = fetchListingLinks_(input.itemType);
+  }
 
-  var prompt = buildPrompt_(input, rules, listing);
+  var prompt = buildPrompt_(input, rules, listing, reference);
   var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(apiKey);
 
   var res = UrlFetchApp.fetch(url, {
@@ -246,7 +295,9 @@ function generateContent(input) {
   }
 
   var historyId = saveContentHistory(input, channels);
-  return { channels: channels, listing: { fetched: listing.fetched, reason: listing.reason || null }, historyId: historyId };
+  var sourceFetched = reference ? reference.fetched : (listing ? listing.fetched : true);
+  var sourceReason = reference ? reference.reason : (listing ? listing.reason : null);
+  return { channels: channels, listing: { fetched: sourceFetched, reason: sourceReason || null }, historyId: historyId };
 }
 
 /** Content_History 탭에 결과를 기록합니다. */
