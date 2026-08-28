@@ -559,7 +559,7 @@ function debugInstagramToken() {
   Logger.log('- 1)번 결과의 expires_at이 이미 지난 시각이면 → 토큰 만료. 재발급 필요.');
 }
 
-/** 인스타그램 자동 게시 (Meta Graph API, 2단계: 컨테이너 생성 → 게시) */
+/** 인스타그램 자동 게시 (Meta Graph API, 2단계: 컨테이너 생성 → 준비 대기 → 게시) */
 function postInstagram(imageUrl, caption) {
   var userId = requireProp_('IG_USER_ID', '인스타그램 User ID');
   var token = requireProp_('IG_ACCESS_TOKEN', '인스타그램 액세스 토큰');
@@ -572,9 +572,24 @@ function postInstagram(imageUrl, caption) {
   var createData = JSON.parse(createRes.getContentText());
   if (!createData.id) throw new Error('인스타그램 컨테이너 생성 실패: ' + createRes.getContentText());
 
+  // 인스타그램 서버가 이미지를 다운로드·처리할 시간이 필요합니다.
+  // status_code가 FINISHED가 될 때까지 최대 10번(약 30초) 대기했다가 발행합니다.
+  var containerId = createData.id;
+  var statusUrl = base + containerId + '?fields=status_code&access_token=' + encodeURIComponent(token);
+  for (var i = 0; i < 10; i++) {
+    Utilities.sleep(3000);
+    var statusRes = UrlFetchApp.fetch(statusUrl, { muteHttpExceptions: true });
+    var statusData = JSON.parse(statusRes.getContentText());
+    if (statusData.status_code === 'FINISHED') break;
+    if (statusData.status_code === 'ERROR') {
+      throw new Error('인스타그램 미디어 처리 실패: ' + statusRes.getContentText());
+    }
+    // IN_PROGRESS면 계속 대기
+  }
+
   var pubRes = UrlFetchApp.fetch(base + userId + '/media_publish', {
     method: 'post', muteHttpExceptions: true,
-    payload: { creation_id: createData.id, access_token: token }
+    payload: { creation_id: containerId, access_token: token }
   });
   var pubData = JSON.parse(pubRes.getContentText());
   if (!pubData.id) throw new Error('인스타그램 게시 실패: ' + pubRes.getContentText());
