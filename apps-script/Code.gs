@@ -25,6 +25,20 @@ function getProp_(name) {
   return PropertiesService.getScriptProperties().getProperty(name);
 }
 
+/**
+ * ===== 임시 도구: 화면 입력이 안 될 때 스크립트 속성을 코드로 직접 설정 =====
+ * 아래 값을 채우고, 이 함수를 편집기 상단 함수 선택 드롭다운에서 골라 ▶ 실행 버튼으로 한 번 실행하세요.
+ * 실행 후에는 이 함수를 지우거나 값을 비워두는 게 안전합니다 (토큰이 코드에 남지 않도록).
+ */
+function setIgTokenManually_() {
+  var newToken = '여기에_새_IG_ACCESS_TOKEN_값을_붙여넣으세요';
+  if (newToken.indexOf('여기에_') === 0) {
+    throw new Error('newToken 값을 먼저 채워주세요.');
+  }
+  PropertiesService.getScriptProperties().setProperty('IG_ACCESS_TOKEN', newToken);
+  Logger.log('IG_ACCESS_TOKEN 갱신 완료. 새 값 앞 10자: ' + newToken.slice(0, 10));
+}
+
 function requireProp_(name, label) {
   var v = getProp_(name);
   if (!v) throw new Error((label || name) + ' 설정이 없습니다. 프로젝트 설정 > 스크립트 속성에서 ' + name + '를 등록해주세요.');
