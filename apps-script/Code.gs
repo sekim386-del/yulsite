@@ -31,6 +31,39 @@ function requireProp_(name, label) {
   return v;
 }
 
+/**
+ * 인스타/스레드, 네이버블로그 작성지침의 기본값입니다.
+ * Brand_Rules 시트의 SNS_Guide / NaverBlog_Guide 칸이 비어있을 때만 이 기본값을 씁니다 —
+ * 업체가 시트에서 직접 지침을 수정하면(코드 수정·재배포 없이) 그 내용이 바로 다음 생성부터 적용됩니다.
+ */
+var DEFAULT_SNS_GUIDE_ = [
+  '1. 첫 문장은 스크롤을 멈추게 하는 "후킹 문장"으로 시작할 것 (질문형, 공감형, 의외성 중 하나).',
+  '2. 문장은 짧게 끊어 쓰고, 문단 사이에 줄바꿈을 넣어 모바일에서 읽기 편하게 할 것.',
+  '3. 이모지를 문장 포인트마다 자연스럽게 사용할 것 (과하지 않게, 2~5개 내외).',
+  '4. 전체 300자 이내로 작성하되, 마지막 줄에는 저장/공유/링크클릭 등을 유도하는 짧은 CTA(행동 유도 문구)를 넣을 것.',
+  '5. hashtags는 5~10개: 브랜드 태그(#프릿지 #가치소비) + 카테고리 태그(친환경/제로웨이스트/업사이클/비건/동물복지 중 관련된 것) + 주제 특화 태그를 섞어서 구성할 것.',
+  '6. threads 캡션은 instagram보다 조금 더 담백하고 대화체로, 스레드 특유의 가벼운 톤으로 쓸 것.'
+].join('\n');
+
+var DEFAULT_NAVERBLOG_GUIDE_ = [
+  '이 상품(프로그램)의 판매·참여 증대를 목표로 구매욕을 자극하는 블로그 글을 쓴다. SEO, AEO, GEO를 고려해 네이버·구글·AI 검색에서 상위노출/추천될 수 있게 작성한다.',
+  '1. 네이버 검색 상위노출을 고려한 키워드로 naverBlog.title(제목)을 작성할 것.',
+  '2. naverBlog.body는 공백 제외 2000자 이상으로 작성할 것.',
+  '3. 말투: 친근하고 친절한 반말로 쓰되, 무례하게 느껴지는 "야", "너"라는 표현은 쓰지 말 것.',
+  '4. naverBlog.body의 첫 문장은 반드시 정확히 "찌-하! 오늘도 가치소비 하고 이찌?" 로 시작할 것.',
+  '5. 이 상품을 쓰지 않을 때의 문제의식을 제기하고, 계속 해결되지 않을 거란 암시를 준 뒤, 이 상품을 해결책으로 자연스럽게 제시할 것.',
+  '6. 이 상품이 고객에게 왜 도움이 되는지, 구매/사용 시 이점을 설명할 것.',
+  '7. 이 상품/브랜드가 많이 팔릴수록 사회적으로 어떤 선한 영향력을 미치는지 어필할 것.',
+  '8. 어떤 사람이 쓰면 좋을지, 누구에게 선물하면 좋을지 추천할 것.',
+  '9. 개인이 직접 쓰거나 소중한 사람에게 선물하기에도 좋고, 기업·기관이 대량구매하기에도 좋은 상품임을 함께 어필할 것.',
+  '10. 프릿지 소개와 함께, 왜 이 상품을 프릿지에서 사야 하는지, 일반 쇼핑몰과의 차별점, ESG 브랜드만 입점시키는 까다로운 심사를 통과한 프릿지의 공식 파트너사라는 점을 어필할 것.',
+  '11. 세일즈 퍼널 흐름으로 자연스럽게 전개하고, selectedItems의 url을 본문 맥락에 자연스럽게 바로가기 링크로 삽입할 것.',
+  '12. 모바일 가독성을 위해 문장 자체를 줄이지 말고, 약 15자 내외 단위로 줄바꿈(엔터) 처리할 것.',
+  '13. 글 마지막에 해시태그를 작성할 것.',
+  '14. 제목을 누락하지 말고 SEO/AEO/GEO를 고려해 작성할 것.',
+  '너무 딱딱하지 않게, 대화하듯 자연스러운 서술형 문장을 정리된 요약투보다 더 많이 써서 작성할 것.'
+].join('\n');
+
 /** 최초 1회 실행: Brand_Rules / Content_History 시트가 없으면 만들고 기본값을 채웁니다. */
 function setupSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -42,6 +75,8 @@ function setupSheets() {
     rules.appendRow(['Persona', '친환경·제로웨이스트·업사이클·비건·동물복지 브랜드를 소개하는 ESG 가치소비 플랫폼 프릿지의 마케터']);
     rules.appendRow(['Keywords', '친환경, 제로웨이스트, 업사이클, 비건, 동물복지, 가치소비, 지속가능']);
     rules.appendRow(['Prohibited_Words', '없음']);
+    rules.appendRow(['SNS_Guide', DEFAULT_SNS_GUIDE_]);
+    rules.appendRow(['NaverBlog_Guide', DEFAULT_NAVERBLOG_GUIDE_]);
     rules.setFrozenRows(1);
   }
 
@@ -65,6 +100,41 @@ function loadBrandRules_() {
     if (data[i][0]) rules[data[i][0]] = data[i][1];
   }
   return rules;
+}
+
+/**
+ * 화면(설정 탭)에서 호출 — 현재 작성지침을 반환합니다.
+ * 시트에 값이 없으면 기본 지침을 그대로 보여줘서, 화면에서 "이게 지금 적용 중인 지침"임을 알 수 있게 합니다.
+ */
+function getGuidelines() {
+  var rules = loadBrandRules_();
+  return {
+    sns: (rules.SNS_Guide && String(rules.SNS_Guide).trim()) || DEFAULT_SNS_GUIDE_,
+    naverBlog: (rules.NaverBlog_Guide && String(rules.NaverBlog_Guide).trim()) || DEFAULT_NAVERBLOG_GUIDE_
+  };
+}
+
+/** 화면(설정 탭)에서 호출 — 작성지침을 Brand_Rules 시트에 저장합니다. 재배포 없이 다음 생성부터 바로 반영됩니다. */
+function saveGuidelines(snsGuide, naverBlogGuide) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Brand_Rules');
+  if (!sheet) { setupSheets(); sheet = ss.getSheetByName('Brand_Rules'); }
+
+  setBrandRuleValue_(sheet, 'SNS_Guide', snsGuide || DEFAULT_SNS_GUIDE_);
+  setBrandRuleValue_(sheet, 'NaverBlog_Guide', naverBlogGuide || DEFAULT_NAVERBLOG_GUIDE_);
+  return { ok: true };
+}
+
+/** Brand_Rules 시트에서 항목명으로 행을 찾아 값을 갱신하고, 없으면 새 행을 추가합니다. */
+function setBrandRuleValue_(sheet, key, value) {
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === key) {
+      sheet.getRange(i + 1, 2).setValue(value);
+      return;
+    }
+  }
+  sheet.appendRow([key, value]);
 }
 
 function doGet(e) {
@@ -286,30 +356,10 @@ function buildPrompt_(input, rules, listing, reference) {
   lines.push('}');
   lines.push('');
   lines.push('=== instagram / threads 캡션 작성 규칙 (반드시 지킬 것) ===');
-  lines.push('1. 첫 문장은 스크롤을 멈추게 하는 "후킹 문장"으로 시작할 것 (질문형, 공감형, 의외성 중 하나).');
-  lines.push('2. 문장은 짧게 끊어 쓰고, 문단 사이에 줄바꿈을 넣어 모바일에서 읽기 편하게 할 것.');
-  lines.push('3. 이모지를 문장 포인트마다 자연스럽게 사용할 것 (과하지 않게, 2~5개 내외).');
-  lines.push('4. 전체 300자 이내로 작성하되, 마지막 줄에는 저장/공유/링크클릭 등을 유도하는 짧은 CTA(행동 유도 문구)를 넣을 것.');
-  lines.push('5. hashtags는 5~10개: 브랜드 태그(#프릿지 #가치소비) + 카테고리 태그(친환경/제로웨이스트/업사이클/비건/동물복지 중 관련된 것) + 주제 특화 태그를 섞어서 구성할 것.');
-  lines.push('6. threads 캡션은 instagram보다 조금 더 담백하고 대화체로, 스레드 특유의 가벼운 톤으로 쓸 것.');
+  lines.push((rules.SNS_Guide && String(rules.SNS_Guide).trim()) || DEFAULT_SNS_GUIDE_);
   lines.push('');
   lines.push('=== naverBlog.body 작성 규칙 (매우 중요, 반드시 모두 지킬 것) ===');
-  lines.push('이 상품(프로그램)의 판매·참여 증대를 목표로 구매욕을 자극하는 블로그 글을 쓴다. SEO, AEO, GEO를 고려해 네이버·구글·AI 검색에서 상위노출/추천될 수 있게 작성한다.');
-  lines.push('1. 네이버 검색 상위노출을 고려한 키워드로 naverBlog.title(제목)을 작성할 것.');
-  lines.push('2. naverBlog.body는 공백 제외 2000자 이상으로 작성할 것.');
-  lines.push('3. 말투: 친근하고 친절한 반말로 쓰되, 무례하게 느껴지는 "야", "너"라는 표현은 쓰지 말 것.');
-  lines.push('4. naverBlog.body의 첫 문장은 반드시 정확히 "찌-하! 오늘도 가치소비 하고 이찌?" 로 시작할 것.');
-  lines.push('5. 이 상품을 쓰지 않을 때의 문제의식을 제기하고, 계속 해결되지 않을 거란 암시를 준 뒤, 이 상품을 해결책으로 자연스럽게 제시할 것.');
-  lines.push('6. 이 상품이 고객에게 왜 도움이 되는지, 구매/사용 시 이점을 설명할 것.');
-  lines.push('7. 이 상품/브랜드가 많이 팔릴수록 사회적으로 어떤 선한 영향력을 미치는지 어필할 것.');
-  lines.push('8. 어떤 사람이 쓰면 좋을지, 누구에게 선물하면 좋을지 추천할 것.');
-  lines.push('9. 개인이 직접 쓰거나 소중한 사람에게 선물하기에도 좋고, 기업·기관이 대량구매하기에도 좋은 상품임을 함께 어필할 것.');
-  lines.push('10. 프릿지 소개와 함께, 왜 이 상품을 프릿지에서 사야 하는지, 일반 쇼핑몰과의 차별점, ESG 브랜드만 입점시키는 까다로운 심사를 통과한 프릿지의 공식 파트너사라는 점을 어필할 것.');
-  lines.push('11. 세일즈 퍼널 흐름으로 자연스럽게 전개하고, selectedItems의 url을 본문 맥락에 자연스럽게 바로가기 링크로 삽입할 것.');
-  lines.push('12. 모바일 가독성을 위해 문장 자체를 줄이지 말고, 약 15자 내외 단위로 줄바꿈(엔터) 처리할 것.');
-  lines.push('13. 글 마지막에 해시태그를 작성할 것.');
-  lines.push('14. 제목을 누락하지 말고 SEO/AEO/GEO를 고려해 작성할 것.');
-  lines.push('너무 딱딱하지 않게, 대화하듯 자연스러운 서술형 문장을 정리된 요약투보다 더 많이 써서 작성할 것.');
+  lines.push((rules.NaverBlog_Guide && String(rules.NaverBlog_Guide).trim()) || DEFAULT_NAVERBLOG_GUIDE_);
   return lines.join('\n');
 }
 

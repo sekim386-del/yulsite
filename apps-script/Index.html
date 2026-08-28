@@ -557,6 +557,26 @@
             </div>
             <p class="status" id="threadsAuthStatus" style="margin-top:10px;"></p>
           </div>
+
+          <div class="panel">
+            <div class="panel-head-row">
+              <div class="panel-title">문구 작성지침</div>
+              <button class="reset-btn" id="guideResetBtn" type="button">기본값으로 되돌리기</button>
+            </div>
+            <p class="settings-note">
+              여기서 수정하면 <b>코드 수정이나 재배포 없이</b> 다음 문구 생성부터 바로 반영됩니다.
+            </p>
+            <div class="field">
+              <label>인스타그램 / 스레드 캡션 작성지침</label>
+              <textarea id="guideSns" style="min-height:150px;"></textarea>
+            </div>
+            <div class="field">
+              <label>네이버 블로그 작성지침</label>
+              <textarea id="guideNaverBlog" style="min-height:220px;"></textarea>
+            </div>
+            <button class="reset-btn" id="guideSaveBtn" type="button" style="background:var(--accent-deep); color:#fff; border-color:var(--accent-deep);">저장</button>
+            <p class="status" id="guideStatus" style="margin-top:10px;"></p>
+          </div>
         </div>
       </div>
     </main>
@@ -573,7 +593,42 @@
         var tab = btn.dataset.tab;
         document.getElementById('tab-main').style.display = tab === 'main' ? '' : 'none';
         document.getElementById('tab-settings').style.display = tab === 'settings' ? '' : 'none';
+        if (tab === 'settings') loadGuidelines();
       });
+    });
+
+    // ---------- 문구 작성지침 ----------
+    function loadGuidelines() {
+      document.getElementById('guideStatus').textContent = '불러오는 중...';
+      google.script.run
+        .withSuccessHandler(function (g) {
+          document.getElementById('guideSns').value = g.sns;
+          document.getElementById('guideNaverBlog').value = g.naverBlog;
+          document.getElementById('guideStatus').textContent = '';
+        })
+        .withFailureHandler(function (err) {
+          document.getElementById('guideStatus').textContent = '불러오기 오류: ' + err.message;
+        })
+        .getGuidelines();
+    }
+    document.getElementById('guideSaveBtn').addEventListener('click', function () {
+      document.getElementById('guideStatus').textContent = '저장 중...';
+      google.script.run
+        .withSuccessHandler(function () {
+          document.getElementById('guideStatus').textContent = '저장 완료! 다음 문구 생성부터 바로 반영됩니다.';
+        })
+        .withFailureHandler(function (err) {
+          document.getElementById('guideStatus').textContent = '저장 오류: ' + err.message;
+        })
+        .saveGuidelines(document.getElementById('guideSns').value, document.getElementById('guideNaverBlog').value);
+    });
+    document.getElementById('guideResetBtn').addEventListener('click', function () {
+      if (!confirm('작성지침을 기본값으로 되돌릴까요? (지금까지 수정한 내용은 사라집니다)')) return;
+      document.getElementById('guideStatus').textContent = '되돌리는 중...';
+      google.script.run
+        .withSuccessHandler(function () { loadGuidelines(); document.getElementById('guideStatus').textContent = '기본값으로 되돌렸습니다.'; })
+        .withFailureHandler(function (err) { document.getElementById('guideStatus').textContent = '오류: ' + err.message; })
+        .saveGuidelines('', '');
     });
 
     // ---------- 대시보드 통계 ----------
