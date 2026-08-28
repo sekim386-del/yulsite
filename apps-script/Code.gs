@@ -30,7 +30,7 @@ function getProp_(name) {
  * 아래 값을 채우고, 이 함수를 편집기 상단 함수 선택 드롭다운에서 골라 ▶ 실행 버튼으로 한 번 실행하세요.
  * 실행 후에는 이 함수를 지우거나 값을 비워두는 게 안전합니다 (토큰이 코드에 남지 않도록).
  */
-function setIgTokenManually_() {
+function setIgTokenManually() {
   var newToken = '여기에_새_IG_ACCESS_TOKEN_값을_붙여넣으세요';
   if (newToken.indexOf('여기에_') === 0) {
     throw new Error('newToken 값을 먼저 채워주세요.');
