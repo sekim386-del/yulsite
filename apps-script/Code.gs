@@ -520,6 +520,45 @@ function uploadImage(base64DataUrl) {
   return data.secure_url;
 }
 
+/**
+ * ===== 진단 도구: 로그인 없이, 지금 등록된 IG_ACCESS_TOKEN이 정확히 뭐가 문제인지 확인 =====
+ * 스크립트 편집기 함수 드롭다운에서 이 함수를 고르고 ▶ 실행 → 실행 로그(보기 > 실행 기록/로그)에서 결과 확인.
+ * 로그인/비밀번호 전혀 필요 없이, 현재 저장된 토큰만으로 서버에서 바로 확인합니다.
+ */
+function debugInstagramToken() {
+  var userId = getProp_('IG_USER_ID');
+  var token = getProp_('IG_ACCESS_TOKEN');
+  if (!token) { Logger.log('IG_ACCESS_TOKEN이 아예 등록되어 있지 않습니다.'); return; }
+  if (!userId) { Logger.log('IG_USER_ID가 아예 등록되어 있지 않습니다.'); return; }
+
+  Logger.log('===== 1) 토큰 자체 정보 (scope, 만료일 등) =====');
+  var debugRes = UrlFetchApp.fetch(
+    'https://graph.facebook.com/debug_token?input_token=' + encodeURIComponent(token) +
+    '&access_token=' + encodeURIComponent(token),
+    { muteHttpExceptions: true }
+  );
+  Logger.log(debugRes.getContentText());
+
+  Logger.log('===== 2) 이 토큰으로 실제 부여된 권한 목록 =====');
+  var permRes = UrlFetchApp.fetch(
+    'https://graph.facebook.com/v19.0/me/permissions?access_token=' + encodeURIComponent(token),
+    { muteHttpExceptions: true }
+  );
+  Logger.log(permRes.getContentText());
+
+  Logger.log('===== 3) IG_USER_ID(' + userId + ')로 실제 계정 정보 조회 =====');
+  var acctRes = UrlFetchApp.fetch(
+    'https://graph.facebook.com/v19.0/' + userId + '?fields=id,username,account_type&access_token=' + encodeURIComponent(token),
+    { muteHttpExceptions: true }
+  );
+  Logger.log(acctRes.getContentText());
+
+  Logger.log('===== 확인 포인트 =====');
+  Logger.log('- 2)번 결과에 "instagram_content_publish"(또는 instagram_basic)가 없으면 → 권한 자체가 없는 토큰. 권한 추가 발급 필요.');
+  Logger.log('- 3)번 결과에 에러가 뜨면 → IG_USER_ID와 토큰이 서로 다른 계정/앱 것이라 안 맞는 상태.');
+  Logger.log('- 1)번 결과의 expires_at이 이미 지난 시각이면 → 토큰 만료. 재발급 필요.');
+}
+
 /** 인스타그램 자동 게시 (Meta Graph API, 2단계: 컨테이너 생성 → 게시) */
 function postInstagram(imageUrl, caption) {
   var userId = requireProp_('IG_USER_ID', '인스타그램 User ID');
