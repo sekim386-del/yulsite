@@ -353,6 +353,41 @@
 
     .empty { color: var(--ink-faint); font-size: 13px; padding: 44px 0; text-align: center; }
 
+    /* ---------- 발행 캘린더 ---------- */
+    .cal-nav { display: flex; align-items: center; gap: 10px; }
+    .cal-nav-btn {
+      width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line); background: var(--paper-sunken);
+      color: var(--ink-soft); font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all .15s ease;
+    }
+    .cal-nav-btn:hover { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-tint); }
+    .cal-month-label { font-family: "Gowun Batang", serif; font-size: 15px; font-weight: 700; color: var(--ink); min-width: 90px; text-align: center; }
+    .cal-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line-soft); }
+    .cal-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+    .cal-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+    .cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 8px; }
+    .cal-weekdays span { text-align: center; font-size: 11px; font-weight: 700; color: var(--ink-faint); padding: 4px 0; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .cal-day {
+      aspect-ratio: 1 / 1; min-height: 62px; border-radius: 10px; border: 1px solid var(--line-soft);
+      background: var(--paper-sunken); padding: 7px 6px; display: flex; flex-direction: column; gap: 5px;
+      cursor: pointer; transition: all .15s ease; position: relative;
+    }
+    .cal-day:hover { border-color: var(--accent); background: var(--accent-tint); }
+    .cal-day.other-month { opacity: .35; pointer-events: none; }
+    .cal-day.today { border-color: var(--accent-deep); box-shadow: 0 0 0 2px var(--accent-tint); }
+    .cal-day.selected { background: var(--olive-soft); border-color: var(--accent); }
+    .cal-day-num { font-family: "JetBrains Mono", monospace; font-size: 11.5px; font-weight: 700; color: var(--ink-soft); }
+    .cal-day.today .cal-day-num { color: var(--accent-deep); }
+    .cal-day-dots { display: flex; flex-wrap: wrap; gap: 3px; margin-top: auto; }
+    .cal-day-dots .cal-dot { width: 6px; height: 6px; }
+    @media (max-width: 620px) { .cal-day { min-height: 42px; padding: 5px 4px; } .cal-legend { gap: 10px; } }
+    .cal-detail-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--paper-sunken); border-radius: var(--radius-sm); border: 1px solid var(--line-soft); margin-bottom: 8px; }
+    .cal-detail-item:last-child { margin-bottom: 0; }
+    .cal-detail-badges { display: flex; gap: 5px; flex: none; }
+    .cal-detail-title { font-size: 12.5px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cal-empty-day { font-size: 12.5px; color: var(--ink-faint); text-align: center; padding: 16px 0; }
+
     /* ---------- 설정 탭 ---------- */
     .key-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin-top: 16px; }
     @media (max-width: 560px) { .key-grid { grid-template-columns: 1fr; } }
@@ -377,6 +412,7 @@
       </div>
       <nav class="side-nav">
         <button class="nav-btn active" data-tab="main"><span class="dot"></span>콘텐츠 생성배포</button>
+        <button class="nav-btn" data-tab="calendar"><span class="dot"></span>발행 캘린더</button>
         <button class="nav-btn" data-tab="settings"><span class="dot"></span>설정</button>
       </nav>
       <div class="side-history">
@@ -590,6 +626,35 @@
           </div>
         </div>
 
+        <!-- ===== 발행 캘린더 탭 ===== -->
+        <div id="tab-calendar" style="display:none">
+          <div class="panel">
+            <div class="panel-head-row">
+              <div class="panel-title">채널별 발행 현황</div>
+              <div class="cal-nav">
+                <button class="cal-nav-btn" id="calPrevBtn" type="button" aria-label="이전 달">‹</button>
+                <span class="cal-month-label" id="calMonthLabel"></span>
+                <button class="cal-nav-btn" id="calNextBtn" type="button" aria-label="다음 달">›</button>
+                <button class="reset-btn" id="calTodayBtn" type="button">오늘</button>
+              </div>
+            </div>
+            <div class="cal-legend">
+              <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--accent)"></span>인스타그램</span>
+              <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--ink-soft)"></span>스레드</span>
+              <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--gold)"></span>네이버 블로그</span>
+              <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--clay)"></span>프릿지 매거진</span>
+            </div>
+            <div class="cal-weekdays">
+              <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+            </div>
+            <div class="cal-grid" id="calGrid"></div>
+          </div>
+          <div class="panel" id="calDayDetailPanel" style="display:none">
+            <div class="panel-title">선택한 날짜 상세</div>
+            <div id="calDayDetail"></div>
+          </div>
+        </div>
+
         <!-- ===== 설정 탭 ===== -->
         <div id="tab-settings" style="display:none">
           <div class="panel">
@@ -678,8 +743,10 @@
         btn.classList.add('active');
         var tab = btn.dataset.tab;
         document.getElementById('tab-main').style.display = tab === 'main' ? '' : 'none';
+        document.getElementById('tab-calendar').style.display = tab === 'calendar' ? '' : 'none';
         document.getElementById('tab-settings').style.display = tab === 'settings' ? '' : 'none';
         if (tab === 'settings') loadGuidelines();
+        if (tab === 'calendar') loadCalendar();
       });
     });
 
@@ -976,6 +1043,9 @@
         setStatus(channel + ' 내용이 복사되었습니다.');
         state.copied[channel] = true;
         updateStats();
+        if (state.historyId) {
+          google.script.run.withFailureHandler(function () {}).recordCopy(state.historyId, channel);
+        }
       }
       catch (e) { setStatus('복사에 실패했습니다. 직접 선택해 복사해주세요.', true); }
       document.body.removeChild(ta);
@@ -1050,6 +1120,126 @@
         return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
       });
     }
+
+    // ---------- 발행 캘린더 ----------
+    var CHANNEL_LABELS_ = { instagram: '인스타그램', threads: '스레드', naverBlog: '네이버 블로그', fridgeMagazine: '프릿지 매거진' };
+    var CHANNEL_COLORS_ = { instagram: 'var(--accent)', threads: 'var(--ink-soft)', naverBlog: 'var(--gold)', fridgeMagazine: 'var(--clay)' };
+    var calState = { current: new Date(), data: [], selectedKey: null };
+
+    function dateKey(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+
+    function loadCalendar() {
+      document.getElementById('calMonthLabel').textContent = (calState.current.getFullYear()) + '년 ' + (calState.current.getMonth() + 1) + '월';
+      google.script.run
+        .withSuccessHandler(function (rows) {
+          calState.data = rows || [];
+          renderCalendarGrid();
+        })
+        .withFailureHandler(function () { calState.data = []; renderCalendarGrid(); })
+        .getPublishCalendar();
+    }
+
+    function renderCalendarGrid() {
+      var grid = document.getElementById('calGrid');
+      grid.innerHTML = '';
+      var year = calState.current.getFullYear(), month = calState.current.getMonth();
+      var firstDay = new Date(year, month, 1);
+      var startOffset = firstDay.getDay();
+      var daysInMonth = new Date(year, month + 1, 0).getDate();
+      var today = new Date();
+
+      // 데이터를 날짜별로 그룹화
+      var byDate = {};
+      calState.data.forEach(function (row) {
+        if (!row.date) return;
+        var d = new Date(row.date);
+        var key = dateKey(d);
+        if (!byDate[key]) byDate[key] = [];
+        byDate[key].push(row);
+      });
+
+      for (var i = 0; i < startOffset; i++) {
+        var pad = document.createElement('div');
+        pad.className = 'cal-day other-month';
+        grid.appendChild(pad);
+      }
+
+      for (var day = 1; day <= daysInMonth; day++) {
+        var cellDate = new Date(year, month, day);
+        var key = dateKey(cellDate);
+        var cell = document.createElement('div');
+        cell.className = 'cal-day';
+        if (dateKey(today) === key) cell.classList.add('today');
+        if (calState.selectedKey === key) cell.classList.add('selected');
+        cell.dataset.key = key;
+
+        var numEl = document.createElement('span');
+        numEl.className = 'cal-day-num';
+        numEl.textContent = day;
+        cell.appendChild(numEl);
+
+        var entries = byDate[key] || [];
+        var channelsUsed = {};
+        entries.forEach(function (row) {
+          Object.keys(row.channels).forEach(function (ch) { if (row.channels[ch]) channelsUsed[ch] = true; });
+        });
+        if (Object.keys(channelsUsed).length) {
+          var dotsWrap = document.createElement('div');
+          dotsWrap.className = 'cal-day-dots';
+          Object.keys(channelsUsed).forEach(function (ch) {
+            var dot = document.createElement('span');
+            dot.className = 'cal-dot';
+            dot.style.setProperty('--c', CHANNEL_COLORS_[ch] || 'var(--accent)');
+            dot.title = CHANNEL_LABELS_[ch] || ch;
+            dotsWrap.appendChild(dot);
+          });
+          cell.appendChild(dotsWrap);
+        }
+
+        cell.addEventListener('click', function () { selectCalDay(this.dataset.key); });
+        grid.appendChild(cell);
+      }
+    }
+
+    function selectCalDay(key) {
+      calState.selectedKey = key;
+      renderCalendarGrid();
+      var panel = document.getElementById('calDayDetailPanel');
+      var wrap = document.getElementById('calDayDetail');
+      panel.style.display = '';
+      var entries = calState.data.filter(function (row) {
+        if (!row.date) return false;
+        return dateKey(new Date(row.date)) === key;
+      });
+      if (!entries.length) {
+        wrap.innerHTML = '<p class="cal-empty-day">이 날짜에는 발행/복사 기록이 없습니다.</p>';
+        return;
+      }
+      wrap.innerHTML = entries.map(function (row) {
+        var badges = Object.keys(row.channels).filter(function (ch) { return row.channels[ch]; }).map(function (ch) {
+          return '<span class="cal-dot" style="--c:' + (CHANNEL_COLORS_[ch] || 'var(--accent)') + '" title="' + CHANNEL_LABELS_[ch] + '"></span>';
+        }).join('');
+        return '<div class="cal-detail-item">' +
+          '<div class="cal-detail-badges">' + badges + '</div>' +
+          '<span class="cal-detail-title">' + escapeHtml(row.targetBrand || row.contentType || '(제목 없음)') + '</span>' +
+          '</div>';
+      }).join('');
+    }
+
+    document.getElementById('calPrevBtn').addEventListener('click', function () {
+      calState.current.setMonth(calState.current.getMonth() - 1);
+      loadCalendar();
+    });
+    document.getElementById('calNextBtn').addEventListener('click', function () {
+      calState.current.setMonth(calState.current.getMonth() + 1);
+      loadCalendar();
+    });
+    document.getElementById('calTodayBtn').addEventListener('click', function () {
+      calState.current = new Date();
+      calState.selectedKey = null;
+      document.getElementById('calDayDetailPanel').style.display = 'none';
+      loadCalendar();
+    });
 
     // ---------- 새 콘텐츠 시작 (초기화) ----------
     document.getElementById('resetBtn').addEventListener('click', function () {

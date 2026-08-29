@@ -97,7 +97,7 @@ function setupSheets() {
   var history = ss.getSheetByName('Content_History');
   if (!history) {
     history = ss.insertSheet('Content_History');
-    history.appendRow(['ID', '생성일시', '콘텐츠유형', '대상브랜드', '핵심메시지', '인스타그램', '스레드', '네이버블로그', '프릿지매거진', '발행상태']);
+    history.appendRow(['ID', '생성일시', '콘텐츠유형', '대상브랜드', '핵심메시지', '인스타그램', '스레드', '네이버블로그', '프릿지매거진', '발행상태', '게시물ID', '인스타상태', '스레드상태', '네이버상태', '매거진상태']);
     history.setFrozenRows(1);
   }
 
@@ -596,18 +596,56 @@ function postInstagram(imageUrl, caption) {
   return pubData.id;
 }
 
-/** Content_History에서 id로 행을 찾아 발행상태·게시물ID를 갱신합니다. */
-function updateHistoryStatus_(id, status, postId) {
+/** 채널별 상태를 캘린더용으로 별도 열에 기록하기 위한 채널→열번호 매핑 (L~O열). */
+var CHANNEL_STATUS_COL_ = { instagram: 12, threads: 13, naverBlog: 14, fridgeMagazine: 15 };
+
+/** Content_History에서 id로 행을 찾아 발행상태·게시물ID·채널별 상태를 갱신합니다. */
+function updateHistoryStatus_(id, status, postId, channel) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Content_History');
   if (!sheet) return;
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
     if (data[i][0] === id) {
-      sheet.getRange(i + 1, 10).setValue(status); // J열: 발행상태
+      sheet.getRange(i + 1, 10).setValue(status); // J열: 발행상태(최근 동작 요약)
       if (postId) sheet.getRange(i + 1, 11).setValue(postId); // K열: 게시물ID
+      var col = CHANNEL_STATUS_COL_[channel];
+      if (col) sheet.getRange(i + 1, col).setValue(status); // L~O열: 채널별 상태(캘린더 표시용)
       break;
     }
   }
+}
+
+/** 화면의 "복사" 버튼 클릭 시 호출 — 캘린더에 표시하기 위해 복사 동작을 기록합니다. */
+function recordCopy(historyId, channel) {
+  updateHistoryStatus_(historyId, '복사완료', null, channel);
+  return { status: 'ok' };
+}
+
+/** 대시보드 캘린더용: 채널별 발행·복사 현황을 날짜별로 반환합니다. */
+function getPublishCalendar() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Content_History');
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var rows = [];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (!r[0]) continue;
+    var channels = {
+      instagram: !!(r[11] && String(r[11]).trim()),
+      threads: !!(r[12] && String(r[12]).trim()),
+      naverBlog: !!(r[13] && String(r[13]).trim()),
+      fridgeMagazine: !!(r[14] && String(r[14]).trim())
+    };
+    if (!channels.instagram && !channels.threads && !channels.naverBlog && !channels.fridgeMagazine) continue;
+    rows.push({
+      id: r[0],
+      date: r[1] ? new Date(r[1]).toISOString() : '',
+      contentType: r[2] || '',
+      targetBrand: r[3] || '',
+      channels: channels
+    });
+  }
+  return rows;
 }
 
 /**
@@ -627,7 +665,7 @@ function publishChannel(historyId, channel, imageDataUrl, caption) {
   } else {
     throw new Error('지원하지 않는 채널입니다: ' + channel);
   }
-  updateHistoryStatus_(historyId, '발행완료(' + channel + ')', postId);
+  updateHistoryStatus_(historyId, '발행완료', postId, channel);
   return { status: 'success', postId: postId };
 }
 
