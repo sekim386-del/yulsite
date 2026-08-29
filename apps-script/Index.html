@@ -34,6 +34,10 @@
       --shadow-md: 0 1px 3px rgba(35,39,31,.04), 0 10px 24px -16px rgba(35,39,31,.14);
       --shadow-lg: 0 4px 10px rgba(35,39,31,.05), 0 20px 44px -22px rgba(35,39,31,.18);
       --shadow-hover: 0 6px 16px -8px rgba(35,39,31,.16);
+      --cal-instagram: #4f8f5f;
+      --cal-threads: #3d5a80;
+      --cal-naver: #c9a227;
+      --cal-magazine: #a13d5c;
     }
     * { box-sizing: border-box; }
     ::selection { background: var(--olive-soft); color: var(--accent-deep); }
@@ -647,10 +651,10 @@
               </div>
             </div>
             <div class="cal-legend">
-              <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--accent)"></span>인스타그램</span>
-              <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--ink-soft)"></span>스레드</span>
-              <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--gold)"></span>네이버 블로그</span>
-              <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--clay)"></span>프릿지 매거진</span>
+              <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--cal-instagram)"></span>인스타그램</span>
+              <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--cal-threads)"></span>스레드</span>
+              <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--cal-naver)"></span>네이버 블로그</span>
+              <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--cal-magazine)"></span>프릿지 매거진</span>
             </div>
             <div class="cal-weekdays">
               <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
@@ -1131,7 +1135,7 @@
 
     // ---------- 발행 캘린더 ----------
     var CHANNEL_LABELS_ = { instagram: '인스타그램', threads: '스레드', naverBlog: '네이버 블로그', fridgeMagazine: '프릿지 매거진' };
-    var CHANNEL_COLORS_ = { instagram: 'var(--accent)', threads: 'var(--ink-soft)', naverBlog: 'var(--gold)', fridgeMagazine: 'var(--clay)' };
+    var CHANNEL_COLORS_ = { instagram: 'var(--cal-instagram)', threads: 'var(--cal-threads)', naverBlog: 'var(--cal-naver)', fridgeMagazine: 'var(--cal-magazine)' };
     var calState = { current: new Date(), data: [], selectedKey: null };
 
     function dateKey(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
