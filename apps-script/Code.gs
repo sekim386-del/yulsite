@@ -621,6 +621,21 @@ function recordCopy(historyId, channel) {
   return { status: 'ok' };
 }
 
+/** 캘린더 상세에서 "취소" 클릭 시 호출 — 실수로 기록된 채널 상태를 지웁니다. */
+function clearChannelStatus(id, channel) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Content_History');
+  if (!sheet) return { status: 'ok' };
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === id) {
+      var col = CHANNEL_STATUS_COL_[channel];
+      if (col) sheet.getRange(i + 1, col).setValue('');
+      break;
+    }
+  }
+  return { status: 'ok' };
+}
+
 /** 대시보드 캘린더용: 채널별 발행·복사 현황을 날짜별로 반환합니다. */
 function getPublishCalendar() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Content_History');

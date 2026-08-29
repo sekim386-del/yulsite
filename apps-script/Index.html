@@ -382,10 +382,18 @@
     .cal-day-dots { display: flex; flex-wrap: wrap; gap: 3px; margin-top: auto; }
     .cal-day-dots .cal-dot { width: 6px; height: 6px; }
     @media (max-width: 620px) { .cal-day { min-height: 42px; padding: 5px 4px; } .cal-legend { gap: 10px; } }
-    .cal-detail-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--paper-sunken); border-radius: var(--radius-sm); border: 1px solid var(--line-soft); margin-bottom: 8px; }
+    .cal-detail-item { padding: 12px 14px; background: var(--paper-sunken); border-radius: var(--radius-sm); border: 1px solid var(--line-soft); margin-bottom: 8px; }
     .cal-detail-item:last-child { margin-bottom: 0; }
-    .cal-detail-badges { display: flex; gap: 5px; flex: none; }
-    .cal-detail-title { font-size: 12.5px; font-weight: 700; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cal-detail-title { font-size: 12.5px; font-weight: 700; color: var(--ink); display: block; margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cal-ch-list { display: flex; flex-direction: column; gap: 6px; }
+    .cal-ch-row { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-soft); }
+    .cal-ch-name { font-weight: 600; flex: 1; }
+    .cal-cancel-btn {
+      font-family: inherit; font-size: 10.5px; font-weight: 700; color: var(--ink-faint);
+      background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; cursor: pointer;
+      transition: all .15s ease; flex: none;
+    }
+    .cal-cancel-btn:hover { border-color: var(--danger); color: var(--danger); background: #fdf1ef; }
     .cal-empty-day { font-size: 12.5px; color: var(--ink-faint); text-align: center; padding: 16px 0; }
 
     /* ---------- 설정 탭 ---------- */
@@ -1128,14 +1136,15 @@
 
     function dateKey(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
 
-    function loadCalendar() {
+    function loadCalendar(afterLoad) {
       document.getElementById('calMonthLabel').textContent = (calState.current.getFullYear()) + '년 ' + (calState.current.getMonth() + 1) + '월';
       google.script.run
         .withSuccessHandler(function (rows) {
           calState.data = rows || [];
           renderCalendarGrid();
+          if (afterLoad) afterLoad();
         })
-        .withFailureHandler(function () { calState.data = []; renderCalendarGrid(); })
+        .withFailureHandler(function () { calState.data = []; renderCalendarGrid(); if (afterLoad) afterLoad(); })
         .getPublishCalendar();
     }
 
@@ -1216,14 +1225,28 @@
         return;
       }
       wrap.innerHTML = entries.map(function (row) {
-        var badges = Object.keys(row.channels).filter(function (ch) { return row.channels[ch]; }).map(function (ch) {
-          return '<span class="cal-dot" style="--c:' + (CHANNEL_COLORS_[ch] || 'var(--accent)') + '" title="' + CHANNEL_LABELS_[ch] + '"></span>';
+        var chList = Object.keys(row.channels).filter(function (ch) { return row.channels[ch]; });
+        var chRows = chList.map(function (ch) {
+          return '<span class="cal-ch-row">' +
+            '<span class="cal-dot" style="--c:' + (CHANNEL_COLORS_[ch] || 'var(--accent)') + '"></span>' +
+            '<span class="cal-ch-name">' + CHANNEL_LABELS_[ch] + '</span>' +
+            '<button type="button" class="cal-cancel-btn" data-id="' + escapeHtml(row.id) + '" data-ch="' + ch + '">취소</button>' +
+            '</span>';
         }).join('');
         return '<div class="cal-detail-item">' +
-          '<div class="cal-detail-badges">' + badges + '</div>' +
           '<span class="cal-detail-title">' + escapeHtml(row.targetBrand || row.contentType || '(제목 없음)') + '</span>' +
+          '<div class="cal-ch-list">' + chRows + '</div>' +
           '</div>';
       }).join('');
+      wrap.querySelectorAll('.cal-cancel-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          if (!confirm('이 채널 기록을 취소할까요? (실제 발행/복사물은 그대로 남고, 캘린더 표시만 지워집니다)')) return;
+          google.script.run
+            .withSuccessHandler(function () { loadCalendar(function () { selectCalDay(key); }); })
+            .withFailureHandler(function (err) { alert('취소 오류: ' + err.message); })
+            .clearChannelStatus(btn.dataset.id, btn.dataset.ch);
+        });
+      });
     }
 
     document.getElementById('calPrevBtn').addEventListener('click', function () {
