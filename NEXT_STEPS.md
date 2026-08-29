@@ -2,7 +2,27 @@
 
 > 8/28 진행 상황 정리. **다음 세션 시작할 때 이 문서부터 보고 바로 이어가면 됩니다.**
 
-## ⭐⭐ 8/28에 찾은 진짜 원인 (가장 중요, 절대 잊지 말 것)
+## ✅✅ 8/28 최종 성과: 인스타그램 실제 발행 성공 확인 완료
+
+오늘 정식 앱 화면("문구 생성" → "인스타그램에 발행")으로 실제 게시 성공, 링크로 직접 확인함:
+`https://www.instagram.com/p/DcmlhkAHRvS/` (계정: `sekim386` 테스트 계정, ID `17841447512677196`)
+
+**막혔던 두 가지 문제와 해결 방법**:
+1. **토큰 만료** → Meta Graph API 탐색기(developers.facebook.com/tools/explorer)에서 "메디마크 콘텐츠 자동화" 앱 + "메디마크 도서홍보" 페이지 선택(이 인스타 계정이 아직 그 페이지에 연결되어 있어서) → User Token 발급(권한: instagram_basic, instagram_content_publish, pages_read_engagement, pages_manage_posts, business_management, pages_show_list) → `/me/accounts?fields=name,id,access_token,instagram_business_account`로 조회해서 실제 IG 계정 ID(`17841447512677196`)와 access_token 확보 → Code.gs의 `setIgCredentialsManually()`로 Script Properties에 반영
+   - ⚠️ **이 토큰은 2026-08-29 00:00 UTC에 만료됨 (일반 User Token, 장기 토큰 아님).** 다음 세션 시작하자마자 `debugInstagramToken()` 실행해서 만료 여부 먼저 확인할 것. 만료됐으면 위 순서 그대로 재발급.
+   - 다음엔 `fb_exchange_token`으로 장기(60일) 토큰 교환하는 작업 필요 (앱 시크릿 필요, 아직 안 함)
+2. **"Media ID is not available" 발행 오류** → `postInstagram()`이 컨테이너 생성 직후 바로 발행을 시도해서 생긴 타이밍 문제. `status_code`가 `FINISHED`가 될 때까지 최대 30초 대기하도록 수정 완료 (Code.gs에 이미 반영됨).
+
+**진단 도구** (로그인 없이 서버에서 바로 확인, Apps Script 함수 드롭다운에서 선택 후 실행):
+- `debugInstagramToken()` — 토큰 만료/권한/계정ID 일치 여부 확인
+- `getPostPermalink()` — 게시물 ID로 실제 인스타그램 링크 조회 (postId 값은 코드 안에서 직접 수정 필요)
+- `testInstagramPublishOnly()` — Gemini 없이 인스타그램 발행 기능만 단독 테스트 (테스트 이미지로 실제 게시되니 주의)
+
+**남은 정리 작업**:
+- 오늘 테스트로 올라간 게시물 3개 정도(`sekim386` 계정) 삭제 필요 (링크: 위 permalink 포함 여러 개)
+- 팀원이 만든 앱은 다른 방식(Instagram API with Instagram Login, `graph.instagram.com`, `IGQ...` 형식 토큰)을 쓰는 것으로 확인됨 — 저희 시스템(`graph.facebook.com`, `EAA...` 토큰)과 호환 안 됨. 서로 다른 구조라 정상이며, 팀원 앱과 토큰을 맞출 필요 없음.
+
+## ⭐⭐ 8/28에 찾은 근본 원인 (계정 소유권 충돌 — 참고용, 아직 완전히 정리는 안 했지만 위 방법으로 우회 성공)
 
 **인스타그램 발행이 계속 안 됐던 근본 원인을 찾았습니다.**
 
