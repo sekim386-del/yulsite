@@ -1,8 +1,37 @@
 # 다음에 이어서 할 일 (재개 체크리스트)
 
-> 8/28 진행 상황 정리. **다음 세션 시작할 때 이 문서부터 보고 바로 이어가면 됩니다.**
+> 8/30 진행 상황 정리. **다음 세션(내일) 시작할 때 이 문서부터 보고 바로 이어가면 됩니다.**
 
-## ✅✅ 8/28 최종 성과: 인스타그램 실제 발행 성공 확인 완료
+## ⭐ 내일 최우선 순위: 스레드 실제 발행 테스트
+
+인스타그램은 8/29~30에 완전히 해결됨(아래 참고). 이제 스레드 차례.
+
+**현재 상태**: `THREADS_USER_ID`, `THREADS_ACCESS_TOKEN` 둘 다 미등록. `postThreads()` 코드는 이미 완성되어 있음(인스타그램과 동일 구조, graph.threads.net API).
+
+**추천 방법** (오늘 인스타그램에서 성공했던 것과 동일한 방식):
+1. Meta Graph API 탐색기(developers.facebook.com/tools/explorer)에서 Meta 앱 선택 (인스타그램 때 썼던 "메디마크 콘텐츠 자동화" 또는 "프릿지 콘텐츠 발행", 페이지 연결 상태에 따라 다름 — 접속해서 권한 나오는 쪽으로)
+2. 권한에 `threads_basic`, `threads_content_publish` 추가해서 User Token 발급
+3. 발급된 토큰으로 스레드 사용자 ID 조회 (예: `me?fields=id,username&access_token=...` 또는 스레드 전용 엔드포인트 확인 필요)
+4. `THREADS_USER_ID`, `THREADS_ACCESS_TOKEN`을 Code.gs 임시 함수로 Script Properties에 등록 (오늘 썼던 `updateLongLivedToken` 패턴 그대로 재사용)
+5. 가능하면 처음부터 `fb_exchange_token`으로 장기 토큰 교환까지 한 번에 진행 (짧은 토큰 → 장기 토큰, 오늘 배운 순서 그대로)
+6. 앱 화면에서 "스레드에 발행" 버튼으로 실제 테스트
+
+**주의**: `@f_ridge.com.official` 계정은 8/26에 반복 로그인 시도로 잠긴 이력 있음. 오늘 인스타그램처럼 sekim386 개인 계정 기반으로 우회 가능한지 먼저 시도하고, 안 되면 새로 시도 전 이 계정 로그인은 하루 이상 자제할 것.
+
+## ✅✅ 8/28~30 최종 성과: 인스타그램 실제 발행 성공 확인 완료 (장기 토큰까지 완료)
+
+**8/30 업데이트**: 장기(무기한, expires_at=0) 토큰 발급까지 완료. 방법:
+1. Graph API 탐색기에서 짧은 User Token 재발급 (메디마크 콘텐츠 자동화 앱, `instagram_basic`/`instagram_content_publish`/`pages_read_engagement`/`pages_manage_posts`/`business_management`/`pages_show_list` 권한)
+2. 그 앱의 "앱 시크릿 코드" 확인 (앱 설정 > 기본 설정)
+3. `oauth/access_token?grant_type=fb_exchange_token&client_id={app_id}&client_secret={app_secret}&fb_exchange_token={방금 발급한 토큰}` 요청으로 장기 User Token 교환 (expires_at: 0, 무기한 확인됨)
+4. 그 장기 토큰으로 `me/accounts?fields=name,id,access_token,instagram_business_account` 재조회 → 페이지 access_token 획득 (이것도 무기한)
+5. `IG_ACCESS_TOKEN`에 등록 → `debugInstagramToken()`으로 `is_valid:true, expires_at:0` 확인 완료
+6. 실제 앱 화면(문구 생성 → 인스타그램에 발행)으로 여러 차례 실제 게시 성공 확인 (permalink로 직접 확인함)
+7. 발행 캘린더 기능도 정상 작동 확인 (날짜별 채널 표시, 상세보기, 취소 기능 다 확인됨)
+
+**참고**: 이 장기 토큰은 "메디마크 콘텐츠 자동화" 앱을 통해 발급됨(프릿지 전용 앱 아님) — 기능상 문제 없음, 나중에 완전히 분리하고 싶으면 프릿지 전용 페이지(이미 만들어둔 "프릿지" 페이지)에 인스타그램 재연결하는 작업 필요(인증코드 문제로 보류 중).
+
+**Gemini 모델**: `gemini-3.6-flash`로 최종 확정 (2.5-flash가 신규 사용자 지원 중단됨, 8/30 확인).
 
 오늘 정식 앱 화면("문구 생성" → "인스타그램에 발행")으로 실제 게시 성공, 링크로 직접 확인함:
 `https://www.instagram.com/p/DcmlhkAHRvS/` (계정: `sekim386` 테스트 계정, ID `17841447512677196`)
