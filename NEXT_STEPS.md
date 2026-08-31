@@ -2,32 +2,20 @@
 
 > 8/30 진행 상황 정리. **다음 세션 시작할 때 이 문서부터 보고 바로 이어가면 됩니다.**
 
-## ⭐ 다음 최우선 순위: 스레드 실제 발행 테스트 (8/30에 시도했으나 막힘 — 아래 진행상황부터 이어갈 것)
+## ✅✅ 8/30 최종 성과: 스레드 실제 발행도 성공! (인스타그램에 이어 완료)
 
-인스타그램은 완전히 해결됨(아래 참고). 스레드는 8/30에 시도했으나 막힌 상태.
+**해결 경로** (Graph API 탐색기 우회는 실패, 결국 원래 설계된 정식 OAuth 버튼으로 해결됨):
+1. "프릿지 콘텐츠 발행" 앱의 Threads API 이용 사례에서 `threads_basic`, `threads_content_publish`는 이미 "테스트 준비 완료" 상태였음
+2. 앱 역할에 `sekim386`을 "Threads 테스터"로 추가 → 스레드 앱(휴대폰) 설정 → 설정 더 보기 → 웹사이트 권한(Apps and Websites) → Invites 탭에서 초대 수락
+3. Graph API 탐색기로는 어떤 앱을 선택해도 `threads_basic` 권한이 노출되지 않아 우회 불가능했음 (메디마크 앱은 애초에 Threads API 제품 자체가 없음)
+4. **결국 원래 만들어뒀던 정식 버튼(설정 탭 "② 스레드 연동 시작")으로 시도 → 성공.** PC에서 로그인 화면이 자동완성 비밀번호로 막혔으나, 그 OAuth URL을 휴대폰(카톡 "나에게 보내기")으로 전달해 휴대폰 브라우저에서 열고, 휴대폰의 저장된 비밀번호(다른 계정 se3kim@daum.net과 연동된 것)를 찾아 로그인 → 권한 동의 화면 → "sekim386 계정으로 계속" → "스레드 연동 완료" 성공
+5. **버그 발견 및 수정**: 연동 직후 실제 발행 시도에서 "Object does not exist" 오류 발생 → 원인은 `THREADS_USER_ID`가 매우 큰 숫자(17자리)라 `JSON.parse()`가 정밀도를 잃어 마지막 자릿수가 틀리게 저장된 것(...594가 ...590으로 저장됨, JS `Number.MAX_SAFE_INTEGER` 초과 문제). `handleThreadsOAuthCallback_()`을 수정해 토큰 교환 직후 `/me` 엔드포인트에서 문자열(quoted)로 ID를 재조회하도록 고침 — 이제 재연동해도 이 버그 재발 안 함
+6. 진단 도구 `debugThreadsToken()` 추가 완료 (로그인 없이 토큰/ID 정합성 확인 가능)
+7. 실제 앱 화면에서 "스레드에 발행" 버튼으로 실제 게시 성공 확인 (게시물 ID: `18118641040934538`)
 
-**현재 상태**: `THREADS_USER_ID`, `THREADS_ACCESS_TOKEN` 둘 다 미등록. `postThreads()` 코드는 이미 완성되어 있음(인스타그램과 동일 구조, graph.threads.net API).
+**등록된 값**: `THREADS_USER_ID = 38327065100271594`, `THREADS_ACCESS_TOKEN` 등록 완료 (장기 토큰 여부는 다음에 `debugThreadsToken`으로 만료 확인 필요 — 인스타그램처럼 만료되면 재연동은 이제 버그 없이 정상 작동함).
 
-**8/30 시도 기록 (막힌 지점 상세)**:
-1. ✅ "프릿지 콘텐츠 발행" 앱의 Threads API 이용 사례에서 `threads_basic`, `threads_content_publish` 권한이 "테스트 준비 완료" 상태인 것 확인함
-2. ✅ 앱 역할에 `sekim386`을 "Threads 테스터"로 추가 → 스레드 앱(휴대폰)의 설정 → 설정 더 보기 → 웹사이트 권한 → Invites 탭에서 초대 수락 완료
-3. ❌ 그럼에도 Graph API 탐색기에서 "프릿지 콘텐츠 발행" 앱 선택 시, 권한 추가 드롭다운에 `threads_basic`이 안 나타남 (여전히 "Other > instagram_manage_comments"만 보임) — 새로고침 후에도 동일
-4. ❌ "메디마크 콘텐츠 자동화" 앱(인스타그램 때 성공했던 앱)은 애초에 제품 목록에 Threads API 자체가 없음 (레거시 스타일 앱이라 추가 불가) — 이 앱으로 우회 불가능
-5. ❌ 비즈니스 관리자(business.facebook.com → 김성은 비즈니스 → 계정)에 "Threads 계정" 자산 등록 메뉴가 안 보임 (인스타그램 계정처럼 자산으로 연결하는 경로를 못 찾음)
-
-**다음에 시도해볼 것**:
-- Meta 개발자 문서에서 Threads API 토큰 발급의 정확한 공식 절차 재확인 (Graph API 탐색기가 아닌 다른 공식 플로우가 있을 수 있음 — 예: threads.net 자체의 개발자용 OAuth 승인 플로우)
-- 이미 구현되어 있는 자체 OAuth 자동화(Code.gs의 `getThreadsAuthUrl`/`handleThreadsOAuthCallback_`, 설정 탭의 "① 리디렉션 URI 확인 / ② 스레드 연동 시작" 버튼)를 다시 시도 — 이건 Graph 탐색기 우회가 아니라 원래 설계된 정식 경로라서, 오히려 이게 더 정상 작동할 수도 있음. `@f_ridge.com.official` 계정 대신 `sekim386` 개인 계정으로 이 버튼 눌러서 로그인 시도해볼 것.
-
-**추천 방법** (오늘 인스타그램에서 성공했던 것과 동일한 방식):
-1. Meta Graph API 탐색기(developers.facebook.com/tools/explorer)에서 Meta 앱 선택 (인스타그램 때 썼던 "메디마크 콘텐츠 자동화" 또는 "프릿지 콘텐츠 발행", 페이지 연결 상태에 따라 다름 — 접속해서 권한 나오는 쪽으로)
-2. 권한에 `threads_basic`, `threads_content_publish` 추가해서 User Token 발급
-3. 발급된 토큰으로 스레드 사용자 ID 조회 (예: `me?fields=id,username&access_token=...` 또는 스레드 전용 엔드포인트 확인 필요)
-4. `THREADS_USER_ID`, `THREADS_ACCESS_TOKEN`을 Code.gs 임시 함수로 Script Properties에 등록 (오늘 썼던 `updateLongLivedToken` 패턴 그대로 재사용)
-5. 가능하면 처음부터 `fb_exchange_token`으로 장기 토큰 교환까지 한 번에 진행 (짧은 토큰 → 장기 토큰, 오늘 배운 순서 그대로)
-6. 앱 화면에서 "스레드에 발행" 버튼으로 실제 테스트
-
-**주의**: `@f_ridge.com.official` 계정은 8/26에 반복 로그인 시도로 잠긴 이력 있음. 오늘 인스타그램처럼 sekim386 개인 계정 기반으로 우회 가능한지 먼저 시도하고, 안 되면 새로 시도 전 이 계정 로그인은 하루 이상 자제할 것.
+**남은 것**: `@f_ridge.com.official` 실제 브랜드 계정으로의 전환은 미완료(현재 `sekim386` 테스트 계정 기준). 인스타그램과 마찬가지로 나중에 실제 브랜드 계정으로 전환하는 작업 필요.
 
 ## ✅✅ 8/28~30 최종 성과: 인스타그램 실제 발행 성공 확인 완료 (장기 토큰까지 완료)
 
