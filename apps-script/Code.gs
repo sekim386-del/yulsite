@@ -229,13 +229,22 @@ function handleThreadsOAuthCallback_(code) {
     var longData = JSON.parse(longRes.getContentText());
     var finalToken = longData.access_token || tokenData.access_token;
 
+    // user_id는 숫자가 매우 커서 JSON.parse가 정밀도를 잃을 수 있으므로,
+    // /me 엔드포인트에서 문자열(quoted)로 다시 조회해 정확한 값을 확보합니다.
+    var meRes = UrlFetchApp.fetch(
+      'https://graph.threads.net/v1.0/me?fields=id&access_token=' + encodeURIComponent(finalToken),
+      { muteHttpExceptions: true }
+    );
+    var meData = JSON.parse(meRes.getContentText());
+    var userId = meData.id || String(tokenData.user_id);
+
     PropertiesService.getScriptProperties().setProperty('THREADS_ACCESS_TOKEN', finalToken);
-    PropertiesService.getScriptProperties().setProperty('THREADS_USER_ID', String(tokenData.user_id));
+    PropertiesService.getScriptProperties().setProperty('THREADS_USER_ID', userId);
 
     return HtmlService.createHtmlOutput(
       '<div style="font-family:sans-serif;padding:40px;text-align:center;">' +
       '<h2>✅ 스레드 연동 완료!</h2>' +
-      '<p>THREADS_USER_ID: ' + tokenData.user_id + '</p>' +
+      '<p>THREADS_USER_ID: ' + userId + '</p>' +
       '<p>토큰이 스크립트 속성에 자동 저장되었습니다. 이 창은 닫으셔도 됩니다.</p>' +
       '</div>'
     );
