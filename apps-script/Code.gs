@@ -684,6 +684,27 @@ function publishChannel(historyId, channel, imageDataUrl, caption) {
   return { status: 'success', postId: postId };
 }
 
+/** 진단 도구: 스레드 토큰/ID가 실제로 서로 맞는지 확인 (로그인 없이 바로 실행) */
+function debugThreadsToken() {
+  var userId = getProp_('THREADS_USER_ID');
+  var token = getProp_('THREADS_ACCESS_TOKEN');
+  Logger.log('저장된 THREADS_USER_ID: ' + userId);
+
+  Logger.log('===== 1) 이 토큰으로 /me 조회 (실제 연결된 계정 확인) =====');
+  var meRes = UrlFetchApp.fetch(
+    'https://graph.threads.net/v1.0/me?fields=id,username&access_token=' + encodeURIComponent(token),
+    { muteHttpExceptions: true }
+  );
+  Logger.log(meRes.getContentText());
+
+  Logger.log('===== 2) 저장된 THREADS_USER_ID로 직접 조회 =====');
+  var idRes = UrlFetchApp.fetch(
+    'https://graph.threads.net/v1.0/' + userId + '?fields=id,username&access_token=' + encodeURIComponent(token),
+    { muteHttpExceptions: true }
+  );
+  Logger.log(idRes.getContentText());
+}
+
 /** 스레드 자동 게시 (Meta Threads API, 2단계: 컨테이너 생성 → 게시) */
 function postThreads(imageUrl, caption) {
   var userId = requireProp_('THREADS_USER_ID', '스레드 User ID');
