@@ -664,6 +664,157 @@ function uploadImage(base64DataUrl) {
 }
 
 /**
+ * ===== 화면(설정 탭) "연결 테스트" 버튼에서 호출 =====
+ * 자격증명 하나를 실제로 그 서비스에 접속해 테스트하고, 실패 시 원인을 "값 잘못됨 / 만료됨 / 권한없음"으로 구분해 알려줍니다.
+ * type: 'gemini' | 'cloudinary' | 'instagram' | 'threads'
+ * 반환: { ok: boolean, reason: string, message: string }
+ */
+function testConnection(type) {
+  switch (type) {
+    case 'gemini': return testGeminiConnection_();
+    case 'cloudinary': return testCloudinaryConnection_();
+    case 'instagram': return testInstagramConnection_();
+    case 'threads': return testThreadsConnection_();
+    default: return { ok: false, reason: 'unknown', message: '알 수 없는 연동 항목입니다: ' + type };
+  }
+}
+
+function testGeminiConnection_() {
+  var apiKey = getProp_('GEMINI_API_KEY');
+  if (!apiKey) return { ok: false, reason: 'missing', message: '값이 등록되어 있지 않습니다. 스크립트 속성에 GEMINI_API_KEY를 등록해주세요.' };
+  try {
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(apiKey);
+    var res = UrlFetchApp.fetch(url, {
+      method: 'post', contentType: 'application/json',
+      payload: JSON.stringify({ contents: [{ parts: [{ text: '연결 테스트' }] }] }),
+      muteHttpExceptions: true
+    });
+    var code = res.getResponseCode();
+    var data = JSON.parse(res.getContentText());
+    if (code === 200 && data.candidates) {
+      return { ok: true, reason: 'ok', message: '정상 연결됨 (모델: ' + GEMINI_MODEL + ')' };
+    }
+    var msg = (data.error && data.error.message) || res.getContentText();
+    if (code === 400 && /API key not valid|API_KEY_INVALID/i.test(msg)) {
+      return { ok: false, reason: 'invalid', message: '값 자체가 잘못되었습니다 (API 키가 유효하지 않음).' };
+    }
+    if (code === 403) {
+      return { ok: false, reason: 'forbidden', message: '권한이 없습니다 (이 키로 해당 모델 사용이 거부됨). ' + msg };
+    }
+    if (code === 429) {
+      return { ok: false, reason: 'quota', message: '요청량 한도 초과 또는 서버 혼잡입니다. 값 자체는 정상일 가능성이 높습니다. 잠시 후 다시 시도해주세요.' };
+    }
+    return { ok: false, reason: 'unknown', message: '오류(' + code + '): ' + msg };
+  } catch (e) {
+    return { ok: false, reason: 'network', message: '네트워크 오류로 확인하지 못했습니다: ' + e.message };
+  }
+}
+
+function testCloudinaryConnection_() {
+  var cloudName = getProp_('CLOUDINARY_CLOUD_NAME');
+  var apiKey = getProp_('CLOUDINARY_API_KEY');
+  var apiSecret = getProp_('CLOUDINARY_API_SECRET');
+  if (!cloudName || !apiKey || !apiSecret) {
+    var missing = [];
+    if (!cloudName) missing.push('CLOUDINARY_CLOUD_NAME');
+    if (!apiKey) missing.push('CLOUDINARY_API_KEY');
+    if (!apiSecret) missing.push('CLOUDINARY_API_SECRET');
+    return { ok: false, reason: 'missing', message: '값이 등록되어 있지 않습니다: ' + missing.join(', ') };
+  }
+  try {
+    var url = 'https://api.cloudinary.com/v1_1/' + encodeURIComponent(cloudName) + '/ping';
+    var auth = Utilities.base64Encode(apiKey + ':' + apiSecret);
+    var res = UrlFetchApp.fetch(url, { headers: { Authorization: 'Basic ' + auth }, muteHttpExceptions: true });
+    var code = res.getResponseCode();
+    if (code === 200) return { ok: true, reason: 'ok', message: '정상 연결됨 (cloud: ' + cloudName + ')' };
+    if (code === 401) return { ok: false, reason: 'invalid', message: '값 자체가 잘못되었습니다 (API 키/시크릿이 클라우드 이름과 맞지 않음).' };
+    if (code === 404) return { ok: false, reason: 'invalid', message: '값 자체가 잘못되었습니다 (CLOUDINARY_CLOUD_NAME(' + cloudName + ')이 존재하지 않음).' };
+    return { ok: false, reason: 'unknown', message: '오류(' + code + '): ' + res.getContentText().slice(0, 200) };
+  } catch (e) {
+    return { ok: false, reason: 'network', message: '네트워크 오류로 확인하지 못했습니다: ' + e.message };
+  }
+}
+
+function testInstagramConnection_() {
+  var userId = getProp_('IG_USER_ID');
+  var token = getProp_('IG_ACCESS_TOKEN');
+  if (!token || !userId) {
+    var missing = [];
+    if (!userId) missing.push('IG_USER_ID');
+    if (!token) missing.push('IG_ACCESS_TOKEN');
+    return { ok: false, reason: 'missing', message: '값이 등록되어 있지 않습니다: ' + missing.join(', ') };
+  }
+  try {
+    var debugRes = UrlFetchApp.fetch(
+      'https://graph.facebook.com/debug_token?input_token=' + encodeURIComponent(token) + '&access_token=' + encodeURIComponent(token),
+      { muteHttpExceptions: true }
+    );
+    var debugData = JSON.parse(debugRes.getContentText());
+    if (debugData.error) {
+      return { ok: false, reason: 'invalid', message: '값 자체가 잘못되었습니다 (토큰 형식 오류). ' + debugData.error.message };
+    }
+    if (debugData.data && debugData.data.is_valid === false) {
+      return { ok: false, reason: 'expired', message: '토큰이 만료되었거나 무효화되었습니다. 설정 탭에서 재발급이 필요합니다.' };
+    }
+
+    var acctRes = UrlFetchApp.fetch(
+      'https://graph.facebook.com/v19.0/' + userId + '?fields=id,username&access_token=' + encodeURIComponent(token),
+      { muteHttpExceptions: true }
+    );
+    var acctData = JSON.parse(acctRes.getContentText());
+    if (acctData.error) {
+      var code = acctData.error.code, sub = acctData.error.error_subcode;
+      if (code === 190) return { ok: false, reason: 'expired', message: '토큰이 만료되었습니다. 재발급이 필요합니다.' };
+      if (code === 100 || code === 200 || sub === 33) {
+        return { ok: false, reason: 'forbidden', message: '권한이 없습니다 (IG_USER_ID와 토큰이 서로 다른 계정/앱이거나 필요한 권한이 없음). ' + acctData.error.message };
+      }
+      return { ok: false, reason: 'invalid', message: '값 자체가 잘못되었습니다. ' + acctData.error.message };
+    }
+
+    var expiresAt = debugData.data && debugData.data.expires_at;
+    var expireNote = (expiresAt === 0) ? ' (만료 없음)' : (expiresAt ? (' (만료: ' + new Date(expiresAt * 1000).toLocaleString('ko-KR') + ')') : '');
+    return { ok: true, reason: 'ok', message: '정상 연결됨: @' + (acctData.username || acctData.id) + expireNote };
+  } catch (e) {
+    return { ok: false, reason: 'network', message: '네트워크 오류로 확인하지 못했습니다: ' + e.message };
+  }
+}
+
+function testThreadsConnection_() {
+  var userId = getProp_('THREADS_USER_ID');
+  var token = getProp_('THREADS_ACCESS_TOKEN');
+  if (!token || !userId) {
+    var missing = [];
+    if (!userId) missing.push('THREADS_USER_ID');
+    if (!token) missing.push('THREADS_ACCESS_TOKEN');
+    return { ok: false, reason: 'missing', message: '값이 등록되어 있지 않습니다: ' + missing.join(', ') };
+  }
+  try {
+    var meRes = UrlFetchApp.fetch(
+      'https://graph.threads.net/v1.0/me?fields=id,username&access_token=' + encodeURIComponent(token),
+      { muteHttpExceptions: true }
+    );
+    var meData = JSON.parse(meRes.getContentText());
+    if (meData.error) {
+      var code = meData.error.code;
+      if (code === 190) return { ok: false, reason: 'expired', message: '토큰이 만료되었습니다. 설정 탭에서 재연동이 필요합니다.' };
+      if (code === 10 || code === 200 || code === 803) {
+        return { ok: false, reason: 'forbidden', message: '권한이 없습니다. ' + meData.error.message };
+      }
+      return { ok: false, reason: 'invalid', message: '값 자체가 잘못되었습니다. ' + meData.error.message };
+    }
+    if (String(meData.id) !== String(userId)) {
+      return {
+        ok: false, reason: 'mismatch',
+        message: '값 자체가 잘못되었습니다 (저장된 THREADS_USER_ID(' + userId + ')가 실제 토큰 계정 ID(' + meData.id + ')와 다릅니다). 설정 탭에서 재연동해주세요.'
+      };
+    }
+    return { ok: true, reason: 'ok', message: '정상 연결됨: @' + (meData.username || meData.id) };
+  } catch (e) {
+    return { ok: false, reason: 'network', message: '네트워크 오류로 확인하지 못했습니다: ' + e.message };
+  }
+}
+
+/**
  * ===== 진단 도구: 로그인 없이, 지금 등록된 IG_ACCESS_TOKEN이 정확히 뭐가 문제인지 확인 =====
  * 스크립트 편집기 함수 드롭다운에서 이 함수를 고르고 ▶ 실행 → 실행 로그(보기 > 실행 기록/로그)에서 결과 확인.
  * 로그인/비밀번호 전혀 필요 없이, 현재 저장된 토큰만으로 서버에서 바로 확인합니다.

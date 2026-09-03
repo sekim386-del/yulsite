@@ -426,15 +426,28 @@
     .cal-empty-day { font-size: 12.5px; color: var(--ink-faint); text-align: center; padding: 16px 0; }
 
     /* ---------- 설정 탭 ---------- */
-    .key-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px; margin-top: 16px; }
-    @media (max-width: 560px) { .key-grid { grid-template-columns: 1fr; } }
-    .key-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 14px; background: var(--paper-sunken); border: 1px solid var(--line); border-radius: var(--radius-sm); transition: border-color .15s ease; }
-    .key-row:hover { border-color: #cfd6c2; }
-    .key-row code { font-family: "JetBrains Mono", monospace; font-size: 11.5px; color: var(--ink); }
-    .key-row .req { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
-    .key-row .req.must { background: var(--gold-soft); color: var(--gold); }
-    .key-row .req.opt { background: var(--line-soft); color: var(--ink-faint); }
+    .req { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+    .req.must { background: var(--gold-soft); color: var(--gold); }
+    .req.opt { background: var(--line-soft); color: var(--ink-faint); }
     .settings-note { font-size: 13px; color: var(--ink-soft); line-height: 1.7; }
+
+    /* ---------- 연결 테스트 ---------- */
+    .conn-test-list { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; }
+    .conn-test-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      padding: 12px 14px; background: var(--paper-sunken); border: 1px solid var(--line); border-radius: var(--radius-sm);
+      transition: border-color .15s ease;
+    }
+    .conn-test-row:hover { border-color: #cfd6c2; }
+    .conn-test-name { font-size: 13px; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+    .conn-test-keys { margin-top: 5px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .conn-test-keys code { font-family: "JetBrains Mono", monospace; font-size: 10.5px; color: var(--ink-faint); }
+    .conn-test-btn { flex: none; }
+    .conn-test-btn.loading { opacity: .6; pointer-events: none; }
+    .conn-test-result { font-size: 12.5px; line-height: 1.5; margin: -1px 0 6px; padding: 0 2px; min-height: 1px; }
+    .conn-test-result.ok { color: var(--accent-deep); font-weight: 600; }
+    .conn-test-result.error { color: var(--danger); font-weight: 600; }
+    .conn-test-result.pending { color: var(--ink-faint); }
   </style>
 </head>
 <body>
@@ -707,17 +720,45 @@
             <div class="panel-title">API 연동 상태</div>
             <p class="settings-note">
               실제 키 값은 Apps Script 편집기 → 프로젝트 설정 → 스크립트 속성에서 등록합니다
-              (보안상 이 화면에서는 값을 직접 다루지 않습니다).
+              (보안상 이 화면에서는 값을 직접 다루지 않습니다). "연결 테스트"를 누르면 실제로 해당 서비스에
+              접속해서 <b>값이 잘못됐는지 / 만료됐는지 / 권한이 없는지</b>를 바로 확인할 수 있습니다.
             </p>
-            <div class="key-grid">
-              <div class="key-row"><code>GEMINI_API_KEY</code><span class="req must">필수</span></div>
-              <div class="key-row"><code>CLOUDINARY_CLOUD_NAME</code><span class="req opt">발행 시</span></div>
-              <div class="key-row"><code>CLOUDINARY_API_KEY</code><span class="req opt">발행 시</span></div>
-              <div class="key-row"><code>CLOUDINARY_API_SECRET</code><span class="req opt">발행 시</span></div>
-              <div class="key-row"><code>IG_USER_ID</code><span class="req opt">인스타 발행</span></div>
-              <div class="key-row"><code>IG_ACCESS_TOKEN</code><span class="req opt">인스타 발행</span></div>
-              <div class="key-row"><code>THREADS_USER_ID</code><span class="req opt">스레드 발행</span></div>
-              <div class="key-row"><code>THREADS_ACCESS_TOKEN</code><span class="req opt">스레드 발행</span></div>
+            <div class="conn-test-list">
+              <div class="conn-test-row">
+                <div class="conn-test-info">
+                  <div class="conn-test-name">Gemini (문구 생성) <span class="req must">필수</span></div>
+                  <div class="conn-test-keys"><code>GEMINI_API_KEY</code></div>
+                </div>
+                <button class="reset-btn conn-test-btn" type="button" data-type="gemini">연결 테스트</button>
+              </div>
+              <p class="conn-test-result" id="connResult-gemini"></p>
+
+              <div class="conn-test-row">
+                <div class="conn-test-info">
+                  <div class="conn-test-name">Cloudinary (이미지 업로드) <span class="req opt">발행 시</span></div>
+                  <div class="conn-test-keys"><code>CLOUDINARY_CLOUD_NAME</code><code>CLOUDINARY_API_KEY</code><code>CLOUDINARY_API_SECRET</code></div>
+                </div>
+                <button class="reset-btn conn-test-btn" type="button" data-type="cloudinary">연결 테스트</button>
+              </div>
+              <p class="conn-test-result" id="connResult-cloudinary"></p>
+
+              <div class="conn-test-row">
+                <div class="conn-test-info">
+                  <div class="conn-test-name">인스타그램 발행 <span class="req opt">인스타 발행</span></div>
+                  <div class="conn-test-keys"><code>IG_USER_ID</code><code>IG_ACCESS_TOKEN</code></div>
+                </div>
+                <button class="reset-btn conn-test-btn" type="button" data-type="instagram">연결 테스트</button>
+              </div>
+              <p class="conn-test-result" id="connResult-instagram"></p>
+
+              <div class="conn-test-row">
+                <div class="conn-test-info">
+                  <div class="conn-test-name">스레드 발행 <span class="req opt">스레드 발행</span></div>
+                  <div class="conn-test-keys"><code>THREADS_USER_ID</code><code>THREADS_ACCESS_TOKEN</code></div>
+                </div>
+                <button class="reset-btn conn-test-btn" type="button" data-type="threads">연결 테스트</button>
+              </div>
+              <p class="conn-test-result" id="connResult-threads"></p>
             </div>
           </div>
 
@@ -893,6 +934,36 @@
             document.getElementById('guideStatus').textContent = '오류: ' + err.message;
           })
           .resetGuidelineSection(section);
+      });
+    });
+
+    // ---------- 연결 테스트 ----------
+    document.querySelectorAll('.conn-test-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var type = btn.dataset.type;
+        var resultEl = document.getElementById('connResult-' + type);
+        btn.disabled = true;
+        btn.classList.add('loading');
+        btn.textContent = '테스트 중...';
+        resultEl.className = 'conn-test-result pending';
+        resultEl.textContent = '연결을 확인하는 중입니다...';
+
+        google.script.run
+          .withSuccessHandler(function (res) {
+            btn.disabled = false;
+            btn.classList.remove('loading');
+            btn.textContent = '연결 테스트';
+            resultEl.className = 'conn-test-result ' + (res.ok ? 'ok' : 'error');
+            resultEl.textContent = (res.ok ? '✓ ' : '✗ ') + res.message;
+          })
+          .withFailureHandler(function (err) {
+            btn.disabled = false;
+            btn.classList.remove('loading');
+            btn.textContent = '연결 테스트';
+            resultEl.className = 'conn-test-result error';
+            resultEl.textContent = '✗ 테스트 실행 중 오류: ' + err.message;
+          })
+          .testConnection(type);
       });
     });
 
