@@ -236,6 +236,16 @@
     .field:last-child { margin-bottom: 0; }
     .field label { display: block; font-size: 12px; font-weight: 700; color: var(--ink-soft); margin-bottom: 6px; letter-spacing: .01em; }
     .field-hint { font-weight: 400; font-size: 10.5px; color: var(--ink-faint); margin-left: 4px; }
+    .field-input-wrap { position: relative; }
+    .field-input-wrap input[type="text"] { padding-right: 34px; }
+    .field-clear-btn {
+      display: none; position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+      width: 22px; height: 22px; border: none; border-radius: 50%; background: var(--paper-sunken);
+      color: var(--ink-faint); font-size: 14px; line-height: 1; cursor: pointer;
+      align-items: center; justify-content: center; transition: background .15s ease, color .15s ease;
+    }
+    .field-clear-btn.show { display: flex; }
+    .field-clear-btn:hover { background: var(--danger); color: #fff; }
     input[type="text"], textarea {
       width: 100%; padding: 11px 13px; border: 1px solid var(--line); border-radius: var(--radius-sm);
       font-size: 13.5px; font-family: inherit; background: var(--paper-sunken); color: var(--ink);
@@ -537,8 +547,11 @@
               </div>
             </div>
             <div class="field">
-              <label>분위기 <span class="field-hint">직접 입력 또는 목록에서 선택</span></label>
-              <input type="text" id="tone" list="toneList" placeholder="예: 따뜻하고 담백하게" autocomplete="off">
+              <label>분위기 <span class="field-hint">직접 입력 또는 목록에서 선택 · 목록 선택 시 이전 내용은 바로 바뀝니다</span></label>
+              <div class="field-input-wrap">
+                <input type="text" id="tone" list="toneList" placeholder="예: 따뜻하고 담백하게" autocomplete="off">
+                <button type="button" class="field-clear-btn" id="toneClearBtn" title="지우기" aria-label="분위기 입력 지우기">✕</button>
+              </div>
               <datalist id="toneList">
                 <option value="따뜻하고 담백하게">
                 <option value="발랄하고 경쾌하게">
@@ -970,11 +983,21 @@
         c.classList.toggle('show', c.dataset.c === state.activeChannel);
       });
 
+      var photoAutoFilled = false;
+      if (data.referenceImage && !state.photos.length) {
+        state.photos.push({ name: '참고 URL 상품 사진', dataUrl: data.referenceImage });
+        renderPhotos();
+        photoAutoFilled = true;
+      }
+
       updateStats();
 
       var note = '생성 완료. 검토 후 발행/복사하세요.';
       if (data.listing && !data.listing.fetched) {
         note += ' (참고 자료를 가져오지 못해 구체적 상품명 없이 작성됨)';
+      }
+      if (photoAutoFilled) {
+        note += ' (참고 URL의 상품 사진을 자동으로 채웠습니다 · 필요하면 교체하세요)';
       }
       setStatus(note);
       loadHistory();
@@ -1279,7 +1302,9 @@
     document.getElementById('resetBtn').addEventListener('click', function () {
       if (!confirm('입력한 내용과 결과를 모두 지우고 새로 시작할까요?')) return;
       ['topic', 'tone', 'extraNotes', 'referenceUrl'].forEach(function (id) {
-        document.getElementById(id).value = '';
+        var el = document.getElementById(id);
+        el.value = '';
+        el.dispatchEvent(new Event('input'));
       });
       document.getElementById('itemCount').value = 1;
       document.querySelector('input[name="itemType"][value="product"]').checked = true;
@@ -1336,6 +1361,23 @@
     restoreDraft();
     updateStats();
     loadHistory();
+
+    // ---------- 분위기 입력칸: 지우기 버튼 (직접 입력/수정 기능은 그대로 유지) ----------
+    (function () {
+      var toneInput = document.getElementById('tone');
+      var toneClearBtn = document.getElementById('toneClearBtn');
+      function syncToneClearBtn() {
+        toneClearBtn.classList.toggle('show', !!toneInput.value);
+      }
+      toneInput.addEventListener('input', syncToneClearBtn);
+      toneClearBtn.addEventListener('click', function () {
+        toneInput.value = '';
+        syncToneClearBtn();
+        saveDraft();
+        toneInput.focus();
+      });
+      syncToneClearBtn();
+    })();
 
     // ---------- 스레드 연동 ----------
     var threadsBtn = document.getElementById('showRedirectBtn');

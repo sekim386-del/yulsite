@@ -302,6 +302,14 @@ function fetchListingLinks_(itemType) {
  * 사용자가 직접 지정한 URL(상품/프로그램 상세페이지 등)을 열람해 본문 텍스트를 추출합니다.
  * 목록 페이지 크롤링(fetchListingLinks_)보다 훨씬 정확 — 정확한 URL을 아는 경우 이걸 우선 사용합니다.
  */
+/** html에서 <meta property="og:xxx" content="..."> 형태의 값을 속성 순서 무관하게 추출합니다. */
+function extractMetaContent_(html, property) {
+  var re1 = new RegExp('<meta[^>]+property=["\']' + property + '["\'][^>]*content=["\']([^"\']+)["\']', 'i');
+  var re2 = new RegExp('<meta[^>]+content=["\']([^"\']+)["\'][^>]*property=["\']' + property + '["\']', 'i');
+  var m = html.match(re1) || html.match(re2);
+  return m ? m[1] : '';
+}
+
 function fetchReferencePage_(pageUrl) {
   try {
     var res = UrlFetchApp.fetch(pageUrl, {
@@ -315,6 +323,25 @@ function fetchReferencePage_(pageUrl) {
     var titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
     var title = titleMatch ? titleMatch[1].replace(/\s+/g, ' ').trim() : '';
 
+    // 상품 대표 이미지: og:image → twitter:image → 본문 첫 <img> 순으로 시도
+    var imageUrl = extractMetaContent_(html, 'og:image') || extractMetaContent_(html, 'twitter:image');
+    if (!imageUrl) {
+      var imgMatch = html.match(/<img[^>]+src=["']([^"']+)["']/i);
+      if (imgMatch) imageUrl = imgMatch[1];
+    }
+    if (imageUrl && imageUrl.indexOf('http') !== 0) {
+      // 상대경로 보정 (Apps Script V8 런타임에는 URL API가 없어 직접 조합)
+      var originMatch = pageUrl.match(/^(https?:\/\/[^/]+)/i);
+      var origin = originMatch ? originMatch[1] : '';
+      if (imageUrl.indexOf('//') === 0) {
+        imageUrl = 'https:' + imageUrl;
+      } else if (imageUrl.indexOf('/') === 0) {
+        imageUrl = origin + imageUrl;
+      } else {
+        imageUrl = origin ? (origin + '/' + imageUrl) : '';
+      }
+    }
+
     var text = html
       .replace(/<script[\s\S]*?<\/script>/gi, ' ')
       .replace(/<style[\s\S]*?<\/style>/gi, ' ')
@@ -326,9 +353,24 @@ function fetchReferencePage_(pageUrl) {
       .slice(0, 4000);
 
     if (!text) return { fetched: false, reason: 'empty_page' };
-    return { fetched: true, text: text, title: title, url: pageUrl };
+    return { fetched: true, text: text, title: title, url: pageUrl, imageUrl: imageUrl || '' };
   } catch (e) {
     return { fetched: false, reason: 'fetch_failed' };
+  }
+}
+
+/** 이미지 URL을 서버에서 내려받아 <img>에 바로 쓸 수 있는 data URL로 변환합니다. (브라우저 CORS 우회) */
+function fetchImageAsDataUrl_(imageUrl) {
+  try {
+    var res = UrlFetchApp.fetch(imageUrl, { muteHttpExceptions: true, followRedirects: true });
+    if (res.getResponseCode() !== 200) return null;
+    var blob = res.getBlob();
+    var contentType = blob.getContentType() || '';
+    if (contentType.indexOf('image/') !== 0) return null;
+    var base64 = Utilities.base64Encode(blob.getBytes());
+    return 'data:' + contentType + ';base64,' + base64;
+  } catch (e) {
+    return null;
   }
 }
 
@@ -386,7 +428,7 @@ function buildPrompt_(input, rules, listing, reference) {
   return lines.join('\n');
 }
 
-var CHAR_LIMITS_ = { instagram: 300, threads: 300, naverBlog: 4000, fridgeMagazine: 900 };
+var CHAR_LIMITS_ = { instagram: 300, threads: 500, naverBlog: 4000, fridgeMagazine: 900 };
 
 function clip_(text, max) {
   if (typeof text !== 'string') return '';
@@ -458,7 +500,19 @@ function generateContent(input) {
   var historyId = saveContentHistory(input, channels);
   var sourceFetched = reference ? reference.fetched : (listing ? listing.fetched : true);
   var sourceReason = reference ? reference.reason : (listing ? listing.reason : null);
-  return { channels: channels, listing: { fetched: sourceFetched, reason: sourceReason || null }, historyId: historyId };
+
+  // 참고 URL에서 상품 대표 이미지를 찾았다면 함께 내려보냅니다. (사진을 직접 등록하지 않은 경우 화면에 자동으로 채워짐)
+  var referenceImage = null;
+  if (reference && reference.fetched && reference.imageUrl) {
+    referenceImage = fetchImageAsDataUrl_(reference.imageUrl);
+  }
+
+  return {
+    channels: channels,
+    listing: { fetched: sourceFetched, reason: sourceReason || null },
+    historyId: historyId,
+    referenceImage: referenceImage
+  };
 }
 
 /** Content_History 탭에 결과를 기록합니다. */
