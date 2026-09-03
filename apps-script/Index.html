@@ -262,6 +262,7 @@
     textarea.textarea-lg { min-height: 150px; }
     textarea.textarea-xl { min-height: 220px; }
     .result-keywords { margin-bottom: 12px; }
+    .result-title { margin-bottom: 12px; }
 
     .example-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
     .chip {
@@ -629,11 +630,17 @@
               </div>
             </div>
             <div class="result-card" data-c="naverBlog">
-              <p class="field-label">본문 <span class="muted">(공백 제외 2000자 이상 · 확인 후 수정하세요)</span></p>
+              <p class="field-label">제목 <span class="muted">(확인 후 수정하세요)</span></p>
+              <input type="text" class="result-title" placeholder="문구를 생성하면 채워집니다.">
+              <div class="result-foot">
+                <button class="copy" data-action="copy-title">① 제목 복사</button>
+                <span class="note">네이버 블로그 제목칸에 붙여넣기</span>
+              </div>
+              <p class="field-label field-label-spaced">본문 <span class="muted">(공백 제외 2000자 이상 · 확인 후 수정하세요)</span></p>
               <textarea class="result-body" data-limit="4000" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
               <div class="result-foot">
-                <button class="copy" data-action="copy">복사</button>
-                <span class="note">복사해서 붙여넣기</span>
+                <button class="copy" data-action="copy-rich">② 본문+사진 복사</button>
+                <span class="note">등록한 사진과 함께 복사 · 네이버 블로그 본문에 붙여넣기</span>
                 <span class="char-count" data-limit="4000">0 / 4000자</span>
               </div>
             </div>
@@ -974,7 +981,7 @@
 
       renderResult('instagram', formatShort(data.channels.instagram));
       renderResult('threads', formatShort(data.channels.threads));
-      renderResult('naverBlog', formatLong(data.channels.naverBlog));
+      renderNaverBlog(data.channels.naverBlog);
       renderResult('fridgeMagazine', formatLong(data.channels.fridgeMagazine));
       renderKeywords(data.channels.fridgeMagazine.keywords);
       renderSelectedItems(data.channels.selectedItems);
@@ -1016,6 +1023,15 @@
       card.value = text;
       updateCharCount(channel);
       updatePreviewCaption(channel);
+    }
+
+    function renderNaverBlog(c) {
+      var card = document.querySelector('.result-card[data-c="naverBlog"]');
+      var titleEl = card.querySelector('.result-title');
+      var bodyEl = card.querySelector('.result-body');
+      if (titleEl) titleEl.value = c.title || '';
+      bodyEl.value = c.body || '';
+      updateCharCount('naverBlog');
     }
 
     function renderKeywords(keywords) {
@@ -1066,6 +1082,12 @@
     document.querySelectorAll('[data-action="copy"]').forEach(function (btn) {
       btn.addEventListener('click', function () { handleCopy(state.activeChannel, btn); });
     });
+    document.querySelectorAll('[data-action="copy-title"]').forEach(function (btn) {
+      btn.addEventListener('click', function () { handleCopyTitle(state.activeChannel, btn); });
+    });
+    document.querySelectorAll('[data-action="copy-rich"]').forEach(function (btn) {
+      btn.addEventListener('click', function () { handleCopyRich(state.activeChannel, btn); });
+    });
 
     function handleCopy(channel, btn) {
       var text = getChannelText(channel);
@@ -1084,6 +1106,79 @@
       }
       catch (e) { setStatus('복사에 실패했습니다. 직접 선택해 복사해주세요.', true); }
       document.body.removeChild(ta);
+    }
+
+    function handleCopyTitle(channel, btn) {
+      var card = document.querySelector('.result-card[data-c="' + channel + '"]');
+      var titleEl = card && card.querySelector('.result-title');
+      if (!titleEl || !titleEl.value.trim()) { setStatus('복사할 제목이 없습니다.', true); return; }
+      var ta = document.createElement('textarea');
+      ta.value = titleEl.value;
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        setStatus(channel + ' 제목이 복사되었습니다.');
+      } catch (e) { setStatus('복사에 실패했습니다. 직접 선택해 복사해주세요.', true); }
+      document.body.removeChild(ta);
+    }
+
+    // 네이버 블로그 클립보드 복사: 본문 텍스트 + 등록된 사진을 하나의 리치 콘텐츠로 함께 복사합니다.
+    // (웹페이지에서 텍스트+이미지를 함께 선택해 Ctrl+C로 복사하는 것과 동일한 방식 — 네이버 스마트에디터에 그대로 붙여넣기 가능)
+    function handleCopyRich(channel, btn) {
+      var card = document.querySelector('.result-card[data-c="' + channel + '"]');
+      var bodyEl = card && card.querySelector('.result-body');
+      var bodyText = bodyEl ? bodyEl.value : '';
+      if (!bodyText.trim()) { setStatus('복사할 본문이 없습니다.', true); return; }
+
+      var container = document.createElement('div');
+      container.setAttribute('contenteditable', 'true');
+      container.style.position = 'fixed';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.whiteSpace = 'pre-wrap';
+
+      bodyText.split('\n').forEach(function (line) {
+        var p = document.createElement('p');
+        if (line) { p.textContent = line; } else { p.innerHTML = '<br>'; }
+        container.appendChild(p);
+      });
+      state.photos.forEach(function (photo) {
+        var p = document.createElement('p');
+        var img = document.createElement('img');
+        img.src = photo.dataUrl;
+        img.style.maxWidth = '100%';
+        p.appendChild(img);
+        container.appendChild(p);
+      });
+
+      document.body.appendChild(container);
+      var ok = false;
+      try {
+        var range = document.createRange();
+        range.selectNodeContents(container);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        ok = document.execCommand('copy');
+        sel.removeAllRanges();
+      } catch (e) { ok = false; }
+      document.body.removeChild(container);
+
+      if (!ok) {
+        // 리치 복사가 지원되지 않는 환경 → 텍스트만 복사로 대체
+        handleCopy(channel, btn);
+        setStatus('이 브라우저에서는 사진 포함 복사가 지원되지 않아 텍스트만 복사했습니다. 사진은 직접 첨부해주세요.', true);
+        return;
+      }
+
+      var photoNote = state.photos.length ? (' (사진 ' + state.photos.length + '장 포함)') : ' (등록된 사진 없음 · 텍스트만 복사됨)';
+      setStatus('네이버 블로그 본문이' + photoNote + ' 복사되었습니다. 블로그 글쓰기 화면에 붙여넣으세요.');
+      state.copied[channel] = true;
+      updateStats();
+      if (state.historyId) {
+        google.script.run.withFailureHandler(function () {}).recordCopy(state.historyId, channel);
+      }
     }
 
     function handlePublish(channel, btn) {
@@ -1316,6 +1411,7 @@
       renderPhotos();
       document.querySelectorAll('.result-body').forEach(function (ta) { ta.value = ''; });
       document.querySelectorAll('.result-keywords').forEach(function (el) { el.value = ''; });
+      document.querySelectorAll('.result-title').forEach(function (el) { el.value = ''; });
       updatePreviewCaption('instagram');
       updatePreviewCaption('threads');
       document.getElementById('selectedItems').innerHTML = '';
