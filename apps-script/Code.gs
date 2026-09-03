@@ -46,17 +46,33 @@ function requireProp_(name, label) {
 }
 
 /**
- * 인스타/스레드, 네이버블로그 작성지침의 기본값입니다.
- * Brand_Rules 시트의 SNS_Guide / NaverBlog_Guide 칸이 비어있을 때만 이 기본값을 씁니다 —
- * 업체가 시트에서 직접 지침을 수정하면(코드 수정·재배포 없이) 그 내용이 바로 다음 생성부터 적용됩니다.
+ * 채널별 작성지침의 기본값입니다 (공통/인스타그램/스레드/네이버블로그/프릿지매거진 5개 섹션).
+ * Brand_Rules 시트의 해당 칸이 비어있을 때만 이 기본값을 씁니다 —
+ * 업체가 시트(또는 화면의 "문구 작성지침")에서 직접 지침을 수정하면(코드 수정·재배포 없이) 그 내용이 바로 다음 생성부터 적용됩니다.
  */
-var DEFAULT_SNS_GUIDE_ = [
+var DEFAULT_COMMON_GUIDE_ = [
+  '모든 채널(인스타그램/스레드/네이버블로그/프릿지매거진) 공통으로 지킬 사항입니다. 아래 채널별 지침보다 먼저 적용됩니다.',
+  '1. 실제로 존재하지 않는 정보나 과장된 효능·효과를 지어내지 말고, 사실에 기반해 진솔하게 작성할 것.',
+  '2. 프릿지(f-ridge.com)가 ESG 가치소비를 지향하는 플랫폼이라는 브랜드 정체성을 자연스럽게 녹여낼 것.',
+  '3. 과도하게 딱딱한 광고 문구보다는, 실제 사람이 쓴 것처럼 자연스러운 어투를 우선할 것.',
+  '4. 어느 채널이든 확정적인 효능·효과 표현이나 과대광고성 표현은 쓰지 말 것.'
+].join('\n');
+
+var DEFAULT_INSTAGRAM_GUIDE_ = [
   '1. 첫 문장은 스크롤을 멈추게 하는 "후킹 문장"으로 시작할 것 (질문형, 공감형, 의외성 중 하나).',
   '2. 문장은 짧게 끊어 쓰고, 문단 사이에 줄바꿈을 넣어 모바일에서 읽기 편하게 할 것.',
   '3. 이모지를 문장 포인트마다 자연스럽게 사용할 것 (과하지 않게, 2~5개 내외).',
-  '4. instagram 캡션은 전체 300자 이내, threads 캡션은 전체 500자 이내로 작성하되(각 채널 실제 게시 글자수 제한), 마지막 줄에는 저장/공유/링크클릭 등을 유도하는 짧은 CTA(행동 유도 문구)를 넣을 것.',
+  '4. 캡션은 전체 300자 이내로 작성하고(인스타그램 실제 게시 글자수 제한), 마지막 줄에는 저장/공유/링크클릭 등을 유도하는 짧은 CTA(행동 유도 문구)를 넣을 것.',
+  '5. hashtags는 5~10개: 브랜드 태그(#프릿지 #가치소비) + 카테고리 태그(친환경/제로웨이스트/업사이클/비건/동물복지 중 관련된 것) + 주제 특화 태그를 섞어서 구성할 것.'
+].join('\n');
+
+var DEFAULT_THREADS_GUIDE_ = [
+  '1. 첫 문장은 스크롤을 멈추게 하는 "후킹 문장"으로 시작할 것 (질문형, 공감형, 의외성 중 하나).',
+  '2. 문장은 짧게 끊어 쓰고, 문단 사이에 줄바꿈을 넣어 모바일에서 읽기 편하게 할 것.',
+  '3. 이모지를 문장 포인트마다 자연스럽게 사용할 것 (과하지 않게, 2~5개 내외).',
+  '4. 캡션은 전체 500자 이내로 작성하고(스레드 실제 게시 글자수 제한), 마지막 줄에는 저장/공유/링크클릭 등을 유도하는 짧은 CTA(행동 유도 문구)를 넣을 것.',
   '5. hashtags는 5~10개: 브랜드 태그(#프릿지 #가치소비) + 카테고리 태그(친환경/제로웨이스트/업사이클/비건/동물복지 중 관련된 것) + 주제 특화 태그를 섞어서 구성할 것.',
-  '6. threads 캡션은 instagram보다 조금 더 담백하고 대화체로, 스레드 특유의 가벼운 톤으로 쓸 것.'
+  '6. instagram보다 조금 더 담백하고 대화체로, 스레드 특유의 가벼운 톤으로 쓸 것.'
 ].join('\n');
 
 var DEFAULT_NAVERBLOG_GUIDE_ = [
@@ -78,6 +94,15 @@ var DEFAULT_NAVERBLOG_GUIDE_ = [
   '너무 딱딱하지 않게, 대화하듯 자연스러운 서술형 문장을 정리된 요약투보다 더 많이 써서 작성할 것.'
 ].join('\n');
 
+var DEFAULT_FRIDGEMAGAZINE_GUIDE_ = [
+  '프릿지 매거진은 f-ridge.com 안에 노출되는 자체 에디토리얼 콘텐츠입니다. 광고 느낌보다는 잡지 기사처럼 정보성 있게 작성합니다.',
+  '1. fridgeMagazine.title은 클릭을 유도하는 매거진 스타일 제목으로 작성할 것 (예: "OO를 위한 3가지 이유"처럼 리스트형/궁금증 유발형 제목 환영).',
+  '2. fridgeMagazine.body는 800~900자 내외로, 도입-본론-마무리 구조를 갖출 것.',
+  '3. 도입부에서 관련 문제의식이나 공감 가는 상황을 제시하고, 본론에서 상품/프로그램을 자연스럽게 소개할 것.',
+  '4. 마무리는 프릿지에서 확인/구매할 수 있다는 안내와 함께 자연스러운 CTA로 끝낼 것.',
+  '5. fridgeMagazine.keywords는 SEO를 고려한 검색 키워드 3~10개로 작성할 것.'
+].join('\n');
+
 /** 최초 1회 실행: Brand_Rules / Content_History 시트가 없으면 만들고 기본값을 채웁니다. */
 function setupSheets() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -89,8 +114,11 @@ function setupSheets() {
     rules.appendRow(['Persona', '친환경·제로웨이스트·업사이클·비건·동물복지 브랜드를 소개하는 ESG 가치소비 플랫폼 프릿지의 마케터']);
     rules.appendRow(['Keywords', '친환경, 제로웨이스트, 업사이클, 비건, 동물복지, 가치소비, 지속가능']);
     rules.appendRow(['Prohibited_Words', '없음']);
-    rules.appendRow(['SNS_Guide', DEFAULT_SNS_GUIDE_]);
+    rules.appendRow(['Common_Guide', DEFAULT_COMMON_GUIDE_]);
+    rules.appendRow(['Instagram_Guide', DEFAULT_INSTAGRAM_GUIDE_]);
+    rules.appendRow(['Threads_Guide', DEFAULT_THREADS_GUIDE_]);
     rules.appendRow(['NaverBlog_Guide', DEFAULT_NAVERBLOG_GUIDE_]);
+    rules.appendRow(['FridgeMagazine_Guide', DEFAULT_FRIDGEMAGAZINE_GUIDE_]);
     rules.setFrozenRows(1);
   }
 
@@ -117,26 +145,69 @@ function loadBrandRules_() {
 }
 
 /**
- * 화면(설정 탭)에서 호출 — 현재 작성지침을 반환합니다.
+ * 지침 5개 섹션의 (시트 키, 예전 키, 기본값) 매핑입니다.
+ * 예전 키(레거시)는 세분화 이전 버전(SNS_Guide 하나로 인스타/스레드 공용)에서 쓰던 값을 그대로 이어받기 위한 것으로,
+ * 새 키(Instagram_Guide/Threads_Guide)가 아직 시트에 없을 때만 참고합니다.
+ */
+var GUIDE_SECTIONS_ = {
+  common: { key: 'Common_Guide', legacyKey: null, def: function () { return DEFAULT_COMMON_GUIDE_; } },
+  instagram: { key: 'Instagram_Guide', legacyKey: 'SNS_Guide', def: function () { return DEFAULT_INSTAGRAM_GUIDE_; } },
+  threads: { key: 'Threads_Guide', legacyKey: 'SNS_Guide', def: function () { return DEFAULT_THREADS_GUIDE_; } },
+  naverBlog: { key: 'NaverBlog_Guide', legacyKey: null, def: function () { return DEFAULT_NAVERBLOG_GUIDE_; } },
+  fridgeMagazine: { key: 'FridgeMagazine_Guide', legacyKey: null, def: function () { return DEFAULT_FRIDGEMAGAZINE_GUIDE_; } }
+};
+
+/** rules(시트 값 객체)에서 한 섹션의 현재 값을 구합니다: 새 키 → 레거시 키 → 기본값 순. */
+function resolveGuideValue_(rules, section) {
+  var cfg = GUIDE_SECTIONS_[section];
+  if (rules[cfg.key] && String(rules[cfg.key]).trim()) return String(rules[cfg.key]).trim();
+  if (cfg.legacyKey && rules[cfg.legacyKey] && String(rules[cfg.legacyKey]).trim()) return String(rules[cfg.legacyKey]).trim();
+  return cfg.def();
+}
+
+/**
+ * 화면(설정 탭)에서 호출 — 현재 작성지침 5개 섹션(공통/인스타그램/스레드/네이버블로그/프릿지매거진)을 반환합니다.
  * 시트에 값이 없으면 기본 지침을 그대로 보여줘서, 화면에서 "이게 지금 적용 중인 지침"임을 알 수 있게 합니다.
+ * 각 섹션에 modified(기본값에서 직접 수정했는지) 플래그를 함께 내려줘서 화면에 "직접 수정함" 표시를 할 수 있게 합니다.
  */
 function getGuidelines() {
   var rules = loadBrandRules_();
-  return {
-    sns: (rules.SNS_Guide && String(rules.SNS_Guide).trim()) || DEFAULT_SNS_GUIDE_,
-    naverBlog: (rules.NaverBlog_Guide && String(rules.NaverBlog_Guide).trim()) || DEFAULT_NAVERBLOG_GUIDE_
-  };
+  var result = {};
+  Object.keys(GUIDE_SECTIONS_).forEach(function (section) {
+    var value = resolveGuideValue_(rules, section);
+    result[section] = { value: value, modified: value !== GUIDE_SECTIONS_[section].def() };
+  });
+  return result;
 }
 
-/** 화면(설정 탭)에서 호출 — 작성지침을 Brand_Rules 시트에 저장합니다. 재배포 없이 다음 생성부터 바로 반영됩니다. */
-function saveGuidelines(snsGuide, naverBlogGuide) {
+/**
+ * 화면(설정 탭)에서 호출 — 작성지침 5개 섹션을 Brand_Rules 시트에 저장합니다. 재배포 없이 다음 생성부터 바로 반영됩니다.
+ * guides: { common, instagram, threads, naverBlog, fridgeMagazine } (문자열, 비어있으면 해당 섹션은 기본값으로 저장됨)
+ */
+function saveGuidelines(guides) {
+  guides = guides || {};
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName('Brand_Rules');
   if (!sheet) { setupSheets(); sheet = ss.getSheetByName('Brand_Rules'); }
 
-  setBrandRuleValue_(sheet, 'SNS_Guide', snsGuide || DEFAULT_SNS_GUIDE_);
-  setBrandRuleValue_(sheet, 'NaverBlog_Guide', naverBlogGuide || DEFAULT_NAVERBLOG_GUIDE_);
+  Object.keys(GUIDE_SECTIONS_).forEach(function (section) {
+    var cfg = GUIDE_SECTIONS_[section];
+    var value = (guides[section] && String(guides[section]).trim()) || cfg.def();
+    setBrandRuleValue_(sheet, cfg.key, value);
+  });
   return { ok: true };
+}
+
+/** 화면(설정 탭)에서 호출 — 지침 섹션 하나만 기본값으로 되돌립니다. section: 'common'|'instagram'|'threads'|'naverBlog'|'fridgeMagazine' */
+function resetGuidelineSection(section) {
+  var cfg = GUIDE_SECTIONS_[section];
+  if (!cfg) throw new Error('알 수 없는 지침 항목: ' + section);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Brand_Rules');
+  if (!sheet) { setupSheets(); sheet = ss.getSheetByName('Brand_Rules'); }
+  var def = cfg.def();
+  setBrandRuleValue_(sheet, cfg.key, def);
+  return { ok: true, value: def };
 }
 
 /** Brand_Rules 시트에서 항목명으로 행을 찾아 값을 갱신하고, 없으면 새 행을 추가합니다. */
@@ -420,11 +491,20 @@ function buildPrompt_(input, rules, listing, reference) {
   lines.push('  "fridgeMagazine": { "title": "매거진 제목", "body": "매거진 본문", "keywords": ["SEO 키워드1", "SEO 키워드2"] }');
   lines.push('}');
   lines.push('');
-  lines.push('=== instagram / threads 캡션 작성 규칙 (반드시 지킬 것) ===');
-  lines.push((rules.SNS_Guide && String(rules.SNS_Guide).trim()) || DEFAULT_SNS_GUIDE_);
+  lines.push('=== 공통 작성지침 (모든 채널에 우선 적용) ===');
+  lines.push(resolveGuideValue_(rules, 'common'));
   lines.push('');
-  lines.push('=== naverBlog.body 작성 규칙 (매우 중요, 반드시 모두 지킬 것) ===');
-  lines.push((rules.NaverBlog_Guide && String(rules.NaverBlog_Guide).trim()) || DEFAULT_NAVERBLOG_GUIDE_);
+  lines.push('=== instagram 캡션 작성지침 (반드시 지킬 것) ===');
+  lines.push(resolveGuideValue_(rules, 'instagram'));
+  lines.push('');
+  lines.push('=== threads 캡션 작성지침 (반드시 지킬 것) ===');
+  lines.push(resolveGuideValue_(rules, 'threads'));
+  lines.push('');
+  lines.push('=== naverBlog.body 작성지침 (매우 중요, 반드시 모두 지킬 것) ===');
+  lines.push(resolveGuideValue_(rules, 'naverBlog'));
+  lines.push('');
+  lines.push('=== fridgeMagazine 작성지침 (반드시 지킬 것) ===');
+  lines.push(resolveGuideValue_(rules, 'fridgeMagazine'));
   return lines.join('\n');
 }
 

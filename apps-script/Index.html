@@ -332,6 +332,20 @@
     .result-body:focus { outline: none; border-color: var(--accent); background: var(--paper); box-shadow: 0 0 0 3px var(--accent-tint); }
     .field-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin: 0 0 7px; display: flex; align-items: baseline; gap: 6px; }
     .field-label .muted { font-weight: 400; color: var(--ink-faint); }
+
+    /* ---------- 문구 작성지침 (채널별 세분화) ---------- */
+    .guide-section { margin-bottom: 22px; }
+    .guide-section:last-of-type { margin-bottom: 0; }
+    .guide-section-head { display: flex; align-items: center; gap: 8px; }
+    .guide-modified-badge {
+      font-size: 10.5px; font-weight: 700; color: var(--accent-deep); background: var(--olive-soft);
+      border-radius: 999px; padding: 2px 8px; letter-spacing: .01em;
+    }
+    .guide-reset-link {
+      margin-left: auto; font-family: inherit; font-size: 11.5px; font-weight: 700; color: var(--ink-faint);
+      background: none; border: none; cursor: pointer; padding: 2px 4px; transition: color .15s ease;
+    }
+    .guide-reset-link:hover { color: var(--danger); }
     .result-foot { display: flex; align-items: center; gap: 12px; }
     .result-foot button { font-family: inherit; font-weight: 700; font-size: 13px; padding: 10px 20px; border-radius: var(--radius-sm); border: none; cursor: pointer; transition: all .15s ease; }
     .result-foot button.primary { background: var(--accent-deep); color: #fff; box-shadow: 0 6px 14px -8px rgba(56,107,70,.32); }
@@ -725,20 +739,59 @@
           <div class="panel">
             <div class="panel-head-row">
               <div class="panel-title">문구 작성지침</div>
-              <button class="reset-btn" id="guideResetBtn" type="button">기본값으로 되돌리기</button>
             </div>
             <p class="settings-note">
               여기서 수정하면 <b>코드 수정이나 재배포 없이</b> 다음 문구 생성부터 바로 반영됩니다.
+              채널별로 따로 수정할 수 있고, 직접 수정한 항목에는 <span class="guide-modified-badge">직접 수정함</span> 표시가 붙습니다.
+              항목별 "초기화"를 누르면 그 항목만 기본값으로 되돌아갑니다.
             </p>
-            <div class="field">
-              <label>인스타그램 / 스레드 캡션 작성지침</label>
-              <textarea id="guideSns" class="textarea-lg"></textarea>
+
+            <div class="field guide-section">
+              <p class="field-label guide-section-head">
+                공통 <span class="muted">모든 채널에 우선 적용</span>
+                <span class="guide-modified-badge" id="guideBadge-common" hidden>직접 수정함</span>
+                <button class="guide-reset-link" type="button" data-section="common">초기화</button>
+              </p>
+              <textarea id="guide-common" class="textarea-lg" data-section="common"></textarea>
             </div>
-            <div class="field">
-              <label>네이버 블로그 작성지침</label>
-              <textarea id="guideNaverBlog" class="textarea-xl"></textarea>
+
+            <div class="field guide-section">
+              <p class="field-label guide-section-head">
+                인스타그램
+                <span class="guide-modified-badge" id="guideBadge-instagram" hidden>직접 수정함</span>
+                <button class="guide-reset-link" type="button" data-section="instagram">초기화</button>
+              </p>
+              <textarea id="guide-instagram" class="textarea-lg" data-section="instagram"></textarea>
             </div>
-            <button class="reset-btn primary" id="guideSaveBtn" type="button">저장</button>
+
+            <div class="field guide-section">
+              <p class="field-label guide-section-head">
+                스레드
+                <span class="guide-modified-badge" id="guideBadge-threads" hidden>직접 수정함</span>
+                <button class="guide-reset-link" type="button" data-section="threads">초기화</button>
+              </p>
+              <textarea id="guide-threads" class="textarea-lg" data-section="threads"></textarea>
+            </div>
+
+            <div class="field guide-section">
+              <p class="field-label guide-section-head">
+                네이버 블로그
+                <span class="guide-modified-badge" id="guideBadge-naverBlog" hidden>직접 수정함</span>
+                <button class="guide-reset-link" type="button" data-section="naverBlog">초기화</button>
+              </p>
+              <textarea id="guide-naverBlog" class="textarea-xl" data-section="naverBlog"></textarea>
+            </div>
+
+            <div class="field guide-section">
+              <p class="field-label guide-section-head">
+                프릿지 매거진
+                <span class="guide-modified-badge" id="guideBadge-fridgeMagazine" hidden>직접 수정함</span>
+                <button class="guide-reset-link" type="button" data-section="fridgeMagazine">초기화</button>
+              </p>
+              <textarea id="guide-fridgeMagazine" class="textarea-lg" data-section="fridgeMagazine"></textarea>
+            </div>
+
+            <button class="reset-btn primary" id="guideSaveBtn" type="button">전체 저장</button>
             <p class="status status-note" id="guideStatus"></p>
           </div>
         </div>
@@ -782,13 +835,24 @@
       });
     });
 
-    // ---------- 문구 작성지침 ----------
+    // ---------- 문구 작성지침 (공통/인스타그램/스레드/네이버블로그/프릿지매거진 5개 섹션) ----------
+    var GUIDE_SECTION_NAMES_ = ['common', 'instagram', 'threads', 'naverBlog', 'fridgeMagazine'];
+
+    function setGuideModifiedBadge_(section, modified) {
+      var badge = document.getElementById('guideBadge-' + section);
+      if (badge) badge.hidden = !modified;
+    }
+
     function loadGuidelines() {
       document.getElementById('guideStatus').textContent = '불러오는 중...';
       google.script.run
         .withSuccessHandler(function (g) {
-          document.getElementById('guideSns').value = g.sns;
-          document.getElementById('guideNaverBlog').value = g.naverBlog;
+          GUIDE_SECTION_NAMES_.forEach(function (section) {
+            var ta = document.getElementById('guide-' + section);
+            var entry = g[section] || { value: '', modified: false };
+            ta.value = entry.value;
+            setGuideModifiedBadge_(section, entry.modified);
+          });
           document.getElementById('guideStatus').textContent = '';
         })
         .withFailureHandler(function (err) {
@@ -796,24 +860,40 @@
         })
         .getGuidelines();
     }
+
     document.getElementById('guideSaveBtn').addEventListener('click', function () {
       document.getElementById('guideStatus').textContent = '저장 중...';
+      var guides = {};
+      GUIDE_SECTION_NAMES_.forEach(function (section) {
+        guides[section] = document.getElementById('guide-' + section).value;
+      });
       google.script.run
         .withSuccessHandler(function () {
           document.getElementById('guideStatus').textContent = '저장 완료! 다음 문구 생성부터 바로 반영됩니다.';
+          loadGuidelines(); // 직접 수정함 배지를 최신 상태로 갱신
         })
         .withFailureHandler(function (err) {
           document.getElementById('guideStatus').textContent = '저장 오류: ' + err.message;
         })
-        .saveGuidelines(document.getElementById('guideSns').value, document.getElementById('guideNaverBlog').value);
+        .saveGuidelines(guides);
     });
-    document.getElementById('guideResetBtn').addEventListener('click', function () {
-      if (!confirm('작성지침을 기본값으로 되돌릴까요? (지금까지 수정한 내용은 사라집니다)')) return;
-      document.getElementById('guideStatus').textContent = '되돌리는 중...';
-      google.script.run
-        .withSuccessHandler(function () { loadGuidelines(); document.getElementById('guideStatus').textContent = '기본값으로 되돌렸습니다.'; })
-        .withFailureHandler(function (err) { document.getElementById('guideStatus').textContent = '오류: ' + err.message; })
-        .saveGuidelines('', '');
+
+    document.querySelectorAll('.guide-reset-link').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var section = btn.dataset.section;
+        if (!confirm('이 항목만 기본값으로 되돌릴까요? (이 항목에서 직접 수정한 내용은 사라집니다)')) return;
+        document.getElementById('guideStatus').textContent = '되돌리는 중...';
+        google.script.run
+          .withSuccessHandler(function (res) {
+            document.getElementById('guide-' + section).value = res.value;
+            setGuideModifiedBadge_(section, false);
+            document.getElementById('guideStatus').textContent = '기본값으로 되돌렸습니다.';
+          })
+          .withFailureHandler(function (err) {
+            document.getElementById('guideStatus').textContent = '오류: ' + err.message;
+          })
+          .resetGuidelineSection(section);
+      });
     });
 
     // ---------- 대시보드 통계 ----------
