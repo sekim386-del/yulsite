@@ -600,12 +600,12 @@
             <div class="result-card" data-c="threads">
               <div class="editor-preview-split">
                 <div>
-                  <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요)</span></p>
-                  <textarea class="result-body" data-limit="300" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
+                  <p class="field-label">캡션 <span class="muted">(확인 후 수정하세요 · 스레드는 500자 초과 시 발행 불가)</span></p>
+                  <textarea class="result-body" data-limit="500" placeholder="문구를 생성하면 채워집니다. 확인 후 수정하세요."></textarea>
                   <div class="result-foot">
                     <button class="primary" data-action="publish">스레드에 발행</button>
                     <span class="note">검토 후 바로 발행</span>
-                    <span class="char-count" data-limit="300">0 / 300자</span>
+                    <span class="char-count" data-limit="500">0 / 500자</span>
                   </div>
                 </div>
                 <div class="ig-preview" data-c="threads">
@@ -1066,6 +1066,13 @@
     function handlePublish(channel, btn) {
       if (!state.historyId) { setStatus('먼저 문구를 생성해주세요.', true); return; }
       if (!state.photos.length) { alert('발행하려면 먼저 사진을 등록해주세요.'); return; }
+      if (channel === 'threads') {
+        var threadsBody = document.querySelector('.result-card[data-c="threads"] .result-body');
+        if (threadsBody && threadsBody.value.length > 500) {
+          alert('스레드는 500자를 넘으면 발행할 수 없습니다. 내용을 줄이거나 "다시 생성"으로 짧게 만들어주세요. (현재 ' + threadsBody.value.length + '자)');
+          return;
+        }
+      }
       if (!confirm(channel + '에 지금 바로 발행하시겠습니까?')) return;
 
       var caption = getChannelText(channel);
