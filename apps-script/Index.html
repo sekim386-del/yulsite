@@ -1080,6 +1080,18 @@
       el.classList.toggle('error', !!isError);
     }
 
+    /** setStatus와 같지만, url이 있으면 클릭 가능한 링크로 메시지 끝에 붙여줍니다. */
+    function setStatusWithLink(msg, url, isError) {
+      var el = document.getElementById('status');
+      if (url) {
+        el.innerHTML = escapeHtml(msg || '') + ' — <a href="' + escapeHtml(url) +
+          '" target="_blank" rel="noopener noreferrer">게시물 보기</a>';
+      } else {
+        el.textContent = msg || '';
+      }
+      el.classList.toggle('error', !!isError);
+    }
+
     // ---------- 문구 생성 ----------
     // ---------- 주제 예시 칩 ----------
     document.querySelectorAll('.chip').forEach(function (chip) {
@@ -1353,8 +1365,7 @@
       google.script.run
         .withSuccessHandler(function (res) {
           var note = channel + ' 발행 완료! (게시물 ID: ' + res.postId + ')';
-          if (res.postUrl) note += ' — ' + res.postUrl;
-          setStatus(note);
+          setStatusWithLink(note, res.postUrl);
           state.published[channel] = true;
           updateStats();
           loadHistory();
