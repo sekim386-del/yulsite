@@ -442,14 +442,20 @@ function fetchReferencePage_(pageUrl) {
 }
 
 /** 이미지 URL을 서버에서 내려받아 <img>에 바로 쓸 수 있는 data URL로 변환합니다. (브라우저 CORS 우회) */
+// Cloudinary는 보안 정책상 SVG/PDF 등은 기본적으로 업로드를 거부합니다("Invalid image file" 오류).
+// 실제 사진 형식만 자동 채움 대상으로 허용하고, 로고/일러스트(SVG 등)는 조용히 건너뜁니다.
+var ALLOWED_REFERENCE_IMAGE_TYPES_ = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+
 function fetchImageAsDataUrl_(imageUrl) {
   try {
     var res = UrlFetchApp.fetch(imageUrl, { muteHttpExceptions: true, followRedirects: true });
     if (res.getResponseCode() !== 200) return null;
     var blob = res.getBlob();
-    var contentType = blob.getContentType() || '';
-    if (contentType.indexOf('image/') !== 0) return null;
-    var base64 = Utilities.base64Encode(blob.getBytes());
+    var contentType = (blob.getContentType() || '').toLowerCase();
+    if (ALLOWED_REFERENCE_IMAGE_TYPES_.indexOf(contentType) === -1) return null;
+    var bytes = blob.getBytes();
+    if (!bytes || bytes.length < 100) return null; // 너무 작은 응답은 에러 페이지 등으로 의심되어 제외
+    var base64 = Utilities.base64Encode(bytes);
     return 'data:' + contentType + ';base64,' + base64;
   } catch (e) {
     return null;
