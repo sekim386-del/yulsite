@@ -125,8 +125,19 @@ function setupSheets() {
   var history = ss.getSheetByName('Content_History');
   if (!history) {
     history = ss.insertSheet('Content_History');
-    history.appendRow(['ID', '생성일시', '콘텐츠유형', '대상브랜드', '핵심메시지', '인스타그램', '스레드', '네이버블로그', '프릿지매거진', '발행상태', '게시물ID', '인스타상태', '스레드상태', '네이버상태', '매거진상태']);
+    history.appendRow(['ID', '생성일시', '콘텐츠유형', '대상브랜드', '핵심메시지', '인스타그램', '스레드', '네이버블로그', '프릿지매거진', '발행상태', '게시물ID', '인스타상태', '스레드상태', '네이버상태', '매거진상태', '인스타URL', '스레드URL']);
     history.setFrozenRows(1);
+  } else {
+    // 이미 만들어져 있던 시트라면, 나중에 추가된 열(인스타URL/스레드URL 등)의 머리글이
+    // 비어있을 때만 채워 넣습니다 — 기존 데이터는 건드리지 않습니다.
+    var headerRow = ['ID', '생성일시', '콘텐츠유형', '대상브랜드', '핵심메시지', '인스타그램', '스레드', '네이버블로그', '프릿지매거진', '발행상태', '게시물ID', '인스타상태', '스레드상태', '네이버상태', '매거진상태', '인스타URL', '스레드URL'];
+    var lastCol = Math.max(history.getLastColumn(), 1);
+    var currentHeader = history.getRange(1, 1, 1, lastCol).getValues()[0];
+    for (var c = 0; c < headerRow.length; c++) {
+      if (!currentHeader[c]) {
+        history.getRange(1, c + 1).setValue(headerRow[c]);
+      }
+    }
   }
 
   return { ok: true, message: '시트 준비 완료' };
@@ -887,14 +898,30 @@ function postInstagram(imageUrl, caption) {
   });
   var pubData = JSON.parse(pubRes.getContentText());
   if (!pubData.id) throw new Error('인스타그램 게시 실패: ' + pubRes.getContentText());
-  return pubData.id;
+
+  // 실제 게시물 URL(permalink)을 추가로 조회합니다. 실패해도 발행 자체는 이미 끝난 상태라
+  // 에러를 던지지 않고 url을 빈 값으로 둡니다(발행 결과 자체는 정상 반환).
+  var permalink = '';
+  try {
+    var linkRes = UrlFetchApp.fetch(
+      base + pubData.id + '?fields=permalink&access_token=' + encodeURIComponent(token),
+      { muteHttpExceptions: true }
+    );
+    var linkData = JSON.parse(linkRes.getContentText());
+    permalink = linkData.permalink || '';
+  } catch (e) { /* permalink 조회 실패는 무시 */ }
+
+  return { id: pubData.id, url: permalink };
 }
 
 /** 채널별 상태를 캘린더용으로 별도 열에 기록하기 위한 채널→열번호 매핑 (L~O열). */
 var CHANNEL_STATUS_COL_ = { instagram: 12, threads: 13, naverBlog: 14, fridgeMagazine: 15 };
 
-/** Content_History에서 id로 행을 찾아 발행상태·게시물ID·채널별 상태를 갱신합니다. */
-function updateHistoryStatus_(id, status, postId, channel) {
+/** 실제 발행된 게시물 URL을 기록하기 위한 채널→열번호 매핑 (P~Q열). 자동 발행 채널(인스타/스레드)만 해당. */
+var CHANNEL_URL_COL_ = { instagram: 16, threads: 17 };
+
+/** Content_History에서 id로 행을 찾아 발행상태·게시물ID·채널별 상태·게시물URL을 갱신합니다. */
+function updateHistoryStatus_(id, status, postId, channel, postUrl) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Content_History');
   if (!sheet) return;
   var data = sheet.getDataRange().getValues();
@@ -904,6 +931,8 @@ function updateHistoryStatus_(id, status, postId, channel) {
       if (postId) sheet.getRange(i + 1, 11).setValue(postId); // K열: 게시물ID
       var col = CHANNEL_STATUS_COL_[channel];
       if (col) sheet.getRange(i + 1, col).setValue(status); // L~O열: 채널별 상태(캘린더 표시용)
+      var urlCol = CHANNEL_URL_COL_[channel];
+      if (urlCol && postUrl) sheet.getRange(i + 1, urlCol).setValue(postUrl); // P~Q열: 실제 게시물 URL
       break;
     }
   }
@@ -951,7 +980,8 @@ function getPublishCalendar() {
       date: r[1] ? new Date(r[1]).toISOString() : '',
       contentType: r[2] || '',
       targetBrand: r[3] || '',
-      channels: channels
+      channels: channels,
+      urls: { instagram: r[15] || '', threads: r[16] || '' }
     });
   }
   return rows;
@@ -966,16 +996,16 @@ function getPublishCalendar() {
  */
 function publishChannel(historyId, channel, imageDataUrl, caption) {
   var imageUrl = uploadImage(imageDataUrl);
-  var postId;
+  var result;
   if (channel === 'instagram') {
-    postId = postInstagram(imageUrl, caption);
+    result = postInstagram(imageUrl, caption);
   } else if (channel === 'threads') {
-    postId = postThreads(imageUrl, caption);
+    result = postThreads(imageUrl, caption);
   } else {
     throw new Error('지원하지 않는 채널입니다: ' + channel);
   }
-  updateHistoryStatus_(historyId, '발행완료', postId, channel);
-  return { status: 'success', postId: postId };
+  updateHistoryStatus_(historyId, '발행완료', result.id, channel, result.url);
+  return { status: 'success', postId: result.id, postUrl: result.url };
 }
 
 /** 진단 도구: 스레드 토큰/ID가 실제로 서로 맞는지 확인 (로그인 없이 바로 실행) */
@@ -1018,5 +1048,18 @@ function postThreads(imageUrl, caption) {
   });
   var pubData = JSON.parse(pubRes.getContentText());
   if (!pubData.id) throw new Error('스레드 게시 실패: ' + pubRes.getContentText());
-  return pubData.id;
+
+  // 실제 게시물 URL(permalink)을 추가로 조회합니다. 실패해도 발행 자체는 이미 끝난 상태라
+  // 에러를 던지지 않고 url을 빈 값으로 둡니다(발행 결과 자체는 정상 반환).
+  var permalink = '';
+  try {
+    var linkRes = UrlFetchApp.fetch(
+      base + pubData.id + '?fields=permalink&access_token=' + encodeURIComponent(token),
+      { muteHttpExceptions: true }
+    );
+    var linkData = JSON.parse(linkRes.getContentText());
+    permalink = linkData.permalink || '';
+  } catch (e) { /* permalink 조회 실패는 무시 */ }
+
+  return { id: pubData.id, url: permalink };
 }
