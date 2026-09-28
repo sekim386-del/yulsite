@@ -449,6 +449,11 @@
     .vendor-empty { text-align: center; color: var(--ink-faint); padding: 18px 0 !important; white-space: normal !important; }
     .vendor-ai-toggle-label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 13px; color: var(--ink); }
     .vendor-ai-toggle-label input[type="checkbox"] { margin-top: 3px; flex: none; width: 16px; height: 16px; accent-color: var(--accent-deep); cursor: pointer; }
+    .vendor-pause-panel { border: 1.5px dashed #e3c3bb; background: #fdf6f4; }
+    .vendor-pause-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+    .vendor-pause-row .vendor-ai-toggle-label { flex: 1; }
+    .vendor-pause-row .vendor-ai-toggle-label input[type="checkbox"] { accent-color: var(--danger); }
+    #vendorPauseSaveBtn { flex: none; }
     .vendor-preview-card {
       margin-top: 8px; padding: 14px 16px; background: var(--paper-sunken); border: 1px solid var(--line);
       border-radius: var(--radius-sm);
@@ -924,6 +929,17 @@
             </p>
           </div>
 
+          <div class="panel vendor-pause-panel">
+            <div class="vendor-pause-row">
+              <label class="vendor-ai-toggle-label">
+                <input type="checkbox" id="vendorPausedToggle">
+                <span>🛑 자동 발송 긴급 정지 <span class="field-hint">켜면 다음 실행부터 아무것도 발송되지 않습니다. 트리거는 그대로 유지되니, 다시 끄면 바로 재개됩니다 (재설치 불필요).</span></span>
+              </label>
+              <button class="reset-btn primary" id="vendorPauseSaveBtn" type="button">적용</button>
+            </div>
+            <p class="status status-note" id="vendorPauseStatus"></p>
+          </div>
+
           <div class="panel">
             <div class="panel-title">입점 후보 업체 등록</div>
             <div class="grid2">
@@ -1010,6 +1026,10 @@
                 <input type="checkbox" id="vendorAiPersonalize">
                 <span>AI로 도입부 개인화 <span class="field-hint">업체 메모를 참고해 인사말 다음 문장을 제미나이가 자연스럽게 다듬어줍니다 (기본 꺼짐, 메모가 없으면 적용 안 됨)</span></span>
               </label>
+            </div>
+            <div class="field">
+              <label>회신 알림 받을 이메일 <span class="field-hint">비워두면 계정 소유자 이메일로 발송 · 회신이 감지되면 자동으로 알림 메일이 옵니다</span></label>
+              <input type="text" id="vendorNotifyEmail" placeholder="예: manager@yulsight.com">
             </div>
             <button class="reset-btn primary" id="vendorSettingsSaveBtn" type="button">템플릿 저장</button>
             <p class="status status-note" id="vendorSettingsStatus"></p>
@@ -1178,6 +1198,8 @@
           document.getElementById('vendorSubject').value = s.subject;
           document.getElementById('vendorBody').value = s.body;
           document.getElementById('vendorAiPersonalize').checked = !!s.aiPersonalize;
+          document.getElementById('vendorNotifyEmail').value = s.notifyEmail || '';
+          document.getElementById('vendorPausedToggle').checked = !!s.paused;
         })
         .withFailureHandler(function (err) {
           document.getElementById('vendorSettingsStatus').textContent = '설정 불러오기 오류: ' + err.message;
@@ -1410,9 +1432,26 @@
         body: document.getElementById('vendorBody').value,
         intervalDays: document.getElementById('vendorIntervalDays').value,
         maxDailySend: document.getElementById('vendorMaxDaily').value,
-        aiPersonalize: document.getElementById('vendorAiPersonalize').checked
+        aiPersonalize: document.getElementById('vendorAiPersonalize').checked,
+        notifyEmail: document.getElementById('vendorNotifyEmail').value.trim(),
+        paused: document.getElementById('vendorPausedToggle').checked
       };
     }
+
+    document.getElementById('vendorPauseSaveBtn').addEventListener('click', function () {
+      var paused = document.getElementById('vendorPausedToggle').checked;
+      document.getElementById('vendorPauseStatus').textContent = '적용 중...';
+      google.script.run
+        .withSuccessHandler(function (res) {
+          document.getElementById('vendorPauseStatus').textContent = res.paused
+            ? '🛑 일시정지 상태입니다. 다음 자동 발송부터 아무것도 나가지 않습니다.'
+            : '✓ 정상 상태입니다. 자동 발송이 예정대로 진행됩니다.';
+        })
+        .withFailureHandler(function (err) {
+          document.getElementById('vendorPauseStatus').textContent = '오류: ' + err.message;
+        })
+        .setVendorPaused(paused);
+    });
 
     document.getElementById('vendorPreviewEmailBtn').addEventListener('click', function () {
       google.script.run

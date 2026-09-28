@@ -1146,6 +1146,8 @@ function setupVendorOutreachSheets() {
     settings.appendRow(['SendIntervalDays', DEFAULT_VENDOR_SEND_INTERVAL_DAYS_]);
     settings.appendRow(['MaxDailySend', DEFAULT_VENDOR_MAX_DAILY_SEND_]);
     settings.appendRow(['AiPersonalize', DEFAULT_VENDOR_AI_PERSONALIZE_]);
+    settings.appendRow(['Paused', false]);
+    settings.appendRow(['NotifyEmail', '']);
     settings.setFrozenRows(1);
   }
 
@@ -1159,14 +1161,16 @@ function setupVendorOutreachSheets() {
   return { ok: true, message: '입점 제안 시트 준비 완료' };
 }
 
-/** 입점제안_설정 시트에서 현재 템플릿/발송주기/일일상한/AI개인화 여부를 읽어옵니다. 비어있으면 기본값을 씁니다. */
+/** 입점제안_설정 시트에서 현재 템플릿/발송주기/일일상한/AI개인화/일시정지/알림이메일을 읽어옵니다. 비어있으면 기본값을 씁니다. */
 function loadVendorSettings_() {
   var result = {
     subject: DEFAULT_VENDOR_PROPOSAL_SUBJECT_,
     body: DEFAULT_VENDOR_PROPOSAL_BODY_,
     intervalDays: DEFAULT_VENDOR_SEND_INTERVAL_DAYS_,
     maxDailySend: DEFAULT_VENDOR_MAX_DAILY_SEND_,
-    aiPersonalize: DEFAULT_VENDOR_AI_PERSONALIZE_
+    aiPersonalize: DEFAULT_VENDOR_AI_PERSONALIZE_,
+    paused: false,
+    notifyEmail: ''
   };
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_SETTINGS_SHEET_);
   if (!sheet) return result;
@@ -1178,8 +1182,15 @@ function loadVendorSettings_() {
     if (key === 'SendIntervalDays' && val) result.intervalDays = Number(val) || DEFAULT_VENDOR_SEND_INTERVAL_DAYS_;
     if (key === 'MaxDailySend' && val) result.maxDailySend = Number(val) || DEFAULT_VENDOR_MAX_DAILY_SEND_;
     if (key === 'AiPersonalize') result.aiPersonalize = (String(val).toLowerCase() === 'true');
+    if (key === 'Paused') result.paused = (String(val).toLowerCase() === 'true');
+    if (key === 'NotifyEmail' && val) result.notifyEmail = String(val).trim();
   }
   return result;
+}
+
+/** 알림을 받을 이메일 주소 — 설정에 지정된 값이 있으면 그걸, 없으면 이 스크립트를 소유한 계정 이메일을 씁니다. */
+function resolveNotifyEmail_(settings) {
+  return settings.notifyEmail || Session.getEffectiveUser().getEmail();
 }
 
 /** 화면(입점 제안 탭)에서 호출 — 현재 메일 템플릿/발송 설정을 반환합니다. */
@@ -1199,7 +1210,9 @@ function saveVendorSettings(settings) {
     Body: (settings.body && String(settings.body).trim()) || DEFAULT_VENDOR_PROPOSAL_BODY_,
     SendIntervalDays: Number(settings.intervalDays) > 0 ? Number(settings.intervalDays) : DEFAULT_VENDOR_SEND_INTERVAL_DAYS_,
     MaxDailySend: Number(settings.maxDailySend) > 0 ? Number(settings.maxDailySend) : DEFAULT_VENDOR_MAX_DAILY_SEND_,
-    AiPersonalize: settings.aiPersonalize ? 'true' : 'false'
+    AiPersonalize: settings.aiPersonalize ? 'true' : 'false',
+    Paused: settings.paused ? 'true' : 'false',
+    NotifyEmail: (settings.notifyEmail && String(settings.notifyEmail).trim()) || ''
   };
 
   var data = sheet.getDataRange().getValues();
@@ -1215,6 +1228,20 @@ function saveVendorSettings(settings) {
     if (!found) sheet.appendRow([key, map[key]]);
   });
   return { ok: true };
+}
+
+/**
+ * 화면(입점 제안 탭)에서 호출 — "일시정지" 스위치를 다른 설정과 별개로 즉시 켜고 끕니다.
+ * (긴급 정지 안전장치 — 템플릿을 안 건드리고 이거 하나만 바로 저장되도록 saveVendorSettings와 분리)
+ * 켜져 있으면 sendVendorProposals()가 아무것도 발송하지 않고 바로 종료합니다. 트리거 자체는 그대로
+ * 유지되니, 재개할 때 트리거를 다시 설치할 필요 없이 이 스위치만 꺼주면 됩니다.
+ */
+function setVendorPaused(paused) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(VENDOR_SETTINGS_SHEET_);
+  if (!sheet) { setupVendorOutreachSheets(); sheet = ss.getSheetByName(VENDOR_SETTINGS_SHEET_); }
+  setBrandRuleValue_(sheet, 'Paused', paused ? 'true' : 'false');
+  return { ok: true, paused: !!paused };
 }
 
 /** 업체 하나를 등록합니다(자동 수집 없음 — 담당자가 직접 입력). 화면 또는 스크립트 편집기에서 직접 호출 가능. */
@@ -1495,6 +1522,10 @@ function sendVendorProposals() {
   if (!sheet) { Logger.log('입점제안_업체리스트 시트가 없습니다. setupVendorOutreachSheets()를 먼저 실행하세요.'); return { ok: false, sentCount: 0 }; }
 
   var settings = loadVendorSettings_();
+  if (settings.paused) {
+    Logger.log('입점 제안 자동 발송이 일시정지 상태라 이번 실행은 건너뜁니다.');
+    return { ok: true, sentCount: 0, paused: true };
+  }
   var webAppUrl = ScriptApp.getService().getUrl();
   var data = sheet.getDataRange().getValues();
   var now = new Date();
@@ -1545,10 +1576,20 @@ function sendVendorProposals() {
  * 확인해, 있으면 자동으로 "회신됨" 상태로 바꿔줍니다. 답장 "내용"까지는 판단하지 않으므로,
  * 실제 입점 진행 여부는 담당자가 답장을 읽고 updateVendorStatus()나 시트에서 직접 갱신해야 합니다.
  */
+/**
+ * ===== 매일 트리거로 자동 실행 =====
+ * 이미 발송했던("발송완료" 상태) 업체의 이메일 주소로부터 최근 30일 내 답장이 왔는지 Gmail에서
+ * 확인해, 있으면 자동으로 "회신됨" 상태로 바꿔줍니다. 답장 "내용"까지는 판단하지 않으므로,
+ * 실제 입점 진행 여부는 담당자가 답장을 읽고 updateVendorStatus()나 시트에서 직접 갱신해야 합니다.
+ * 새로 회신이 감지된 업체가 있으면, 하나하나가 아니라 이번 실행에서 찾은 걸 묶어서 알림 메일
+ * 한 통을 담당자(설정의 NotifyEmail, 없으면 계정 소유자)에게 보냅니다 — 매일 시트를 직접
+ * 확인하지 않아도 회신 온 걸 놓치지 않게 하기 위함입니다.
+ */
 function checkVendorReplies() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_SHEET_);
   if (!sheet) return;
   var data = sheet.getDataRange().getValues();
+  var newlyReplied = [];
 
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
@@ -1559,10 +1600,39 @@ function checkVendorReplies() {
       var threads = GmailApp.search('from:' + r[3] + ' newer_than:30d', 0, 1);
       if (threads.length > 0) {
         sheet.getRange(i + 1, VENDOR_COLS_.status).setValue('회신됨');
+        newlyReplied.push({ name: r[1], email: r[3] });
       }
     } catch (e) {
       Logger.log('회신 확인 실패 (' + r[3] + '): ' + e.message);
     }
+  }
+
+  if (newlyReplied.length) {
+    notifyVendorReplies_(newlyReplied);
+  }
+}
+
+/** 새로 회신이 감지된 업체 목록을 담당자에게 알림 메일 한 통으로 요약해 보냅니다. */
+function notifyVendorReplies_(newlyReplied) {
+  try {
+    var settings = loadVendorSettings_();
+    var to = resolveNotifyEmail_(settings);
+    if (!to) return;
+
+    var sheetUrl = SpreadsheetApp.getActiveSpreadsheet().getUrl();
+    var lines = newlyReplied.map(function (v) { return '- ' + v.name + ' (' + v.email + ')'; });
+    var subject = '[프릿지 입점제안] 새 회신 ' + newlyReplied.length + '건 도착';
+    var body = [
+      '입점 제안 메일을 보냈던 아래 업체에서 회신이 온 것으로 감지됐습니다:',
+      '',
+      lines.join('\n'),
+      '',
+      '내용을 직접 확인하시고, 진행 상황에 맞게 상태를 "입점완료" 등으로 업데이트해주세요.',
+      '시트 바로가기: ' + sheetUrl
+    ].join('\n');
+    GmailApp.sendEmail(to, subject, body);
+  } catch (e) {
+    Logger.log('회신 알림 메일 발송 실패: ' + e.message);
   }
 }
 
