@@ -1178,6 +1178,40 @@ function loadVendorSettings_() {
   return result;
 }
 
+/** 화면(입점 제안 탭)에서 호출 — 현재 메일 템플릿/발송 설정을 반환합니다. */
+function getVendorSettings() {
+  return loadVendorSettings_();
+}
+
+/** 화면(입점 제안 탭)에서 호출 — 메일 템플릿/발송 설정을 저장합니다. 코드 재배포 없이 다음 발송부터 반영됩니다. */
+function saveVendorSettings(settings) {
+  settings = settings || {};
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(VENDOR_SETTINGS_SHEET_);
+  if (!sheet) { setupVendorOutreachSheets(); sheet = ss.getSheetByName(VENDOR_SETTINGS_SHEET_); }
+
+  var map = {
+    Subject: (settings.subject && String(settings.subject).trim()) || DEFAULT_VENDOR_PROPOSAL_SUBJECT_,
+    Body: (settings.body && String(settings.body).trim()) || DEFAULT_VENDOR_PROPOSAL_BODY_,
+    SendIntervalDays: Number(settings.intervalDays) > 0 ? Number(settings.intervalDays) : DEFAULT_VENDOR_SEND_INTERVAL_DAYS_,
+    MaxDailySend: Number(settings.maxDailySend) > 0 ? Number(settings.maxDailySend) : DEFAULT_VENDOR_MAX_DAILY_SEND_
+  };
+
+  var data = sheet.getDataRange().getValues();
+  Object.keys(map).forEach(function (key) {
+    var found = false;
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === key) {
+        sheet.getRange(i + 1, 2).setValue(map[key]);
+        found = true;
+        break;
+      }
+    }
+    if (!found) sheet.appendRow([key, map[key]]);
+  });
+  return { ok: true };
+}
+
 /** 업체 하나를 등록합니다(자동 수집 없음 — 담당자가 직접 입력). 화면 또는 스크립트 편집기에서 직접 호출 가능. */
 function addVendor(name, contact, email, memo) {
   if (!name || !email) throw new Error('업체명과 이메일은 필수입니다.');

@@ -427,6 +427,19 @@
     .cal-cancel-btn:hover { border-color: var(--danger); color: var(--danger); background: #fdf1ef; }
     .cal-empty-day { font-size: 12.5px; color: var(--ink-faint); text-align: center; padding: 16px 0; }
 
+    /* ---------- 입점 제안 탭 ---------- */
+    .table-scroll { overflow-x: auto; margin-top: 14px; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+    .vendor-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 640px; }
+    .vendor-table th, .vendor-table td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    .vendor-table th { background: var(--paper-sunken); color: var(--ink-soft); font-weight: 700; font-size: 11.5px; }
+    .vendor-table tbody tr:last-child td { border-bottom: none; }
+    .vendor-table td.memo-cell { white-space: normal; min-width: 140px; color: var(--ink-soft); }
+    .vendor-status-select {
+      font-family: inherit; font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--line);
+      background: var(--paper-sunken); color: var(--ink); cursor: pointer;
+    }
+    .vendor-empty { text-align: center; color: var(--ink-faint); padding: 18px 0 !important; white-space: normal !important; }
+
     /* ---------- 설정 탭 ---------- */
     .req { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
     .req.must { background: var(--gold-soft); color: var(--gold); }
@@ -465,6 +478,7 @@
       <nav class="side-nav">
         <button class="nav-btn active" data-tab="main"><span class="dot"></span>콘텐츠 생성배포</button>
         <button class="nav-btn" data-tab="calendar"><span class="dot"></span>발행 캘린더</button>
+        <button class="nav-btn" data-tab="vendors"><span class="dot"></span>입점 제안</button>
         <button class="nav-btn" data-tab="settings"><span class="dot"></span>설정</button>
       </nav>
       <div class="side-history">
@@ -838,6 +852,105 @@
             <p class="status status-note" id="guideStatus"></p>
           </div>
         </div>
+
+        <!-- ===== 입점 제안 탭 ===== -->
+        <div id="tab-vendors" style="display:none">
+          <div class="panel">
+            <div class="panel-title">입점 제안 자동화 — 시작하기</div>
+            <p class="settings-note">
+              신규 입점 후보 업체에게 2주 주기로 입점 제안 메일을 자동 발송하고, 중복 발송 방지·회신 확인까지
+              자동으로 관리합니다. <b>후보 업체는 자동으로 수집하지 않습니다</b> — 담당자가 직접 확보한 연락처만
+              아래에 등록해주세요 (정보통신망법상 자동 수집한 주소로 광고성 메일을 보내는 것은 제한됩니다).
+            </p>
+            <div class="btn-row">
+              <button class="reset-btn" id="vendorSetupBtn" type="button">① 시트 초기 설정</button>
+              <button class="reset-btn primary" id="vendorInstallTriggerBtn" type="button">② 자동 발송/확인 시작</button>
+            </div>
+            <p class="status status-note" id="vendorSetupStatus"></p>
+            <p class="settings-note" style="margin-top:10px;">
+              ※ "② 자동 발송/확인 시작"을 처음 누르면 Gmail 접근 권한이 필요합니다. 이 화면에서 오류가 나면,
+              Apps Script 편집기 상단 함수 목록에서 <code>installVendorOutreachTriggers</code>를 선택해
+              ▶ 실행 버튼으로 한 번 직접 실행해 권한 승인 창을 띄워주세요 (최초 1회만 필요).
+              <code>@yulsight.com</code> 주소로 발송하려면 그 계정이 Google Workspace(유료)여야 합니다.
+            </p>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">입점 후보 업체 등록</div>
+            <div class="grid2">
+              <div class="field">
+                <label>업체명</label>
+                <input type="text" id="vendorName" placeholder="예: OO컴퍼니">
+              </div>
+              <div class="field">
+                <label>담당자 <span class="field-hint">선택사항</span></label>
+                <input type="text" id="vendorContact" placeholder="예: 홍길동 팀장">
+              </div>
+            </div>
+            <div class="field">
+              <label>이메일</label>
+              <input type="text" id="vendorEmail" placeholder="contact@company.com">
+            </div>
+            <div class="field">
+              <label>메모 <span class="field-hint">선택사항</span></label>
+              <input type="text" id="vendorMemo" placeholder="어디서 발굴했는지, 특이사항 등">
+            </div>
+            <button class="reset-btn primary" id="vendorAddBtn" type="button">업체 등록</button>
+            <p class="status status-note" id="vendorAddStatus"></p>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head-row">
+              <div class="panel-title">등록된 업체 목록</div>
+              <div class="btn-row" style="margin-top:0;">
+                <button class="reset-btn" id="vendorPreviewBtn" type="button">다음 발송 대상 미리보기</button>
+                <button class="reset-btn" id="vendorRefreshBtn" type="button">새로고침</button>
+              </div>
+            </div>
+            <p class="status status-note" id="vendorPreviewResult"></p>
+            <div class="table-scroll">
+              <table class="vendor-table" id="vendorTable">
+                <thead>
+                  <tr><th>업체명</th><th>담당자</th><th>이메일</th><th>상태</th><th>최근발송</th><th>발송횟수</th><th>메모</th></tr>
+                </thead>
+                <tbody id="vendorTableBody">
+                  <tr><td colspan="7" class="vendor-empty">등록된 업체가 없습니다.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head-row">
+              <div class="panel-title">발송 설정 및 메일 템플릿</div>
+            </div>
+            <p class="settings-note">
+              여기서 수정하면 코드 수정 없이 다음 자동 발송부터 바로 반영됩니다.
+              본문에 <code>{{업체명}}</code> <code>{{담당자}}</code> <code>{{이메일}}</code> <code>{{수신거부링크}}</code>를
+              넣으면 발송 시 자동으로 채워집니다 (수신거부링크는 꼭 포함해주세요).
+            </p>
+            <div class="grid2">
+              <div class="field">
+                <label>발송 주기(일)</label>
+                <input type="number" id="vendorIntervalDays" min="1" value="14">
+              </div>
+              <div class="field">
+                <label>1회 실행당 최대 발송 개수</label>
+                <input type="number" id="vendorMaxDaily" min="1" value="20">
+              </div>
+            </div>
+            <div class="field">
+              <label>메일 제목</label>
+              <input type="text" id="vendorSubject">
+            </div>
+            <div class="field">
+              <label>메일 본문</label>
+              <textarea id="vendorBody" class="textarea-xl"></textarea>
+            </div>
+            <button class="reset-btn primary" id="vendorSettingsSaveBtn" type="button">템플릿 저장</button>
+            <p class="status status-note" id="vendorSettingsStatus"></p>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -872,9 +985,11 @@
         var tab = btn.dataset.tab;
         document.getElementById('tab-main').style.display = tab === 'main' ? '' : 'none';
         document.getElementById('tab-calendar').style.display = tab === 'calendar' ? '' : 'none';
+        document.getElementById('tab-vendors').style.display = tab === 'vendors' ? '' : 'none';
         document.getElementById('tab-settings').style.display = tab === 'settings' ? '' : 'none';
         if (tab === 'settings') loadGuidelines();
         if (tab === 'calendar') loadCalendar();
+        if (tab === 'vendors') loadVendorTab();
       });
     });
 
@@ -967,6 +1082,148 @@
           })
           .testConnection(type);
       });
+    });
+
+    // ---------- 입점 제안 탭 ----------
+    var VENDOR_STATUS_OPTIONS_ = ['대기중', '발송완료', '회신됨', '입점완료', '보류', '수신거부'];
+
+    function loadVendorTab() {
+      loadVendorList();
+      google.script.run
+        .withSuccessHandler(function (s) {
+          document.getElementById('vendorIntervalDays').value = s.intervalDays;
+          document.getElementById('vendorMaxDaily').value = s.maxDailySend;
+          document.getElementById('vendorSubject').value = s.subject;
+          document.getElementById('vendorBody').value = s.body;
+        })
+        .withFailureHandler(function (err) {
+          document.getElementById('vendorSettingsStatus').textContent = '설정 불러오기 오류: ' + err.message;
+        })
+        .getVendorSettings();
+    }
+
+    function loadVendorList() {
+      var tbody = document.getElementById('vendorTableBody');
+      google.script.run
+        .withSuccessHandler(function (rows) {
+          if (!rows || !rows.length) {
+            tbody.innerHTML = '<tr><td colspan="7" class="vendor-empty">등록된 업체가 없습니다.</td></tr>';
+            return;
+          }
+          tbody.innerHTML = rows.map(function (v) {
+            var lastSent = v.lastSentAt ? new Date(v.lastSentAt).toLocaleDateString('ko-KR') : '-';
+            var options = VENDOR_STATUS_OPTIONS_.map(function (s) {
+              return '<option value="' + s + '"' + (s === v.status ? ' selected' : '') + '>' + s + '</option>';
+            }).join('');
+            return '<tr>' +
+              '<td>' + escapeHtml(v.name) + '</td>' +
+              '<td>' + escapeHtml(v.contact || '-') + '</td>' +
+              '<td>' + escapeHtml(v.email) + '</td>' +
+              '<td><select class="vendor-status-select" data-id="' + escapeHtml(v.id) + '">' + options + '</select></td>' +
+              '<td>' + lastSent + '</td>' +
+              '<td>' + (v.sentCount || 0) + '</td>' +
+              '<td class="memo-cell">' + escapeHtml(v.memo || '') + '</td>' +
+              '</tr>';
+          }).join('');
+          tbody.querySelectorAll('.vendor-status-select').forEach(function (sel) {
+            sel.addEventListener('change', function () {
+              google.script.run
+                .withFailureHandler(function (err) { alert('상태 변경 오류: ' + err.message); })
+                .updateVendorStatus(sel.dataset.id, sel.value);
+            });
+          });
+        })
+        .withFailureHandler(function (err) {
+          tbody.innerHTML = '<tr><td colspan="7" class="vendor-empty">불러오기 오류: ' + escapeHtml(err.message) + '</td></tr>';
+        })
+        .getVendorList();
+    }
+
+    document.getElementById('vendorSetupBtn').addEventListener('click', function () {
+      document.getElementById('vendorSetupStatus').textContent = '설정 중...';
+      google.script.run
+        .withSuccessHandler(function (res) {
+          document.getElementById('vendorSetupStatus').textContent = '✓ ' + res.message;
+          loadVendorTab();
+        })
+        .withFailureHandler(function (err) {
+          document.getElementById('vendorSetupStatus').textContent = '오류: ' + err.message;
+        })
+        .setupVendorOutreachSheets();
+    });
+
+    document.getElementById('vendorInstallTriggerBtn').addEventListener('click', function () {
+      if (!confirm('2주마다 자동 발송, 매일 회신 확인 트리거를 설치할까요? (이미 설치되어 있으면 재설치됩니다)')) return;
+      document.getElementById('vendorSetupStatus').textContent = '트리거 설치 중... (최초 1회는 권한 승인이 필요할 수 있습니다)';
+      google.script.run
+        .withSuccessHandler(function (res) {
+          document.getElementById('vendorSetupStatus').textContent = '✓ ' + res.message;
+        })
+        .withFailureHandler(function (err) {
+          document.getElementById('vendorSetupStatus').textContent =
+            '오류: ' + err.message + ' — Apps Script 편집기에서 installVendorOutreachTriggers 함수를 직접 실행해 권한을 승인해주세요.';
+        })
+        .installVendorOutreachTriggers();
+    });
+
+    document.getElementById('vendorAddBtn').addEventListener('click', function () {
+      var name = document.getElementById('vendorName').value.trim();
+      var contact = document.getElementById('vendorContact').value.trim();
+      var email = document.getElementById('vendorEmail').value.trim();
+      var memo = document.getElementById('vendorMemo').value.trim();
+      if (!name || !email) {
+        document.getElementById('vendorAddStatus').textContent = '업체명과 이메일은 필수입니다.';
+        return;
+      }
+      document.getElementById('vendorAddStatus').textContent = '등록 중...';
+      google.script.run
+        .withSuccessHandler(function () {
+          document.getElementById('vendorAddStatus').textContent = '✓ 등록 완료';
+          ['vendorName', 'vendorContact', 'vendorEmail', 'vendorMemo'].forEach(function (id) {
+            document.getElementById(id).value = '';
+          });
+          loadVendorList();
+        })
+        .withFailureHandler(function (err) {
+          document.getElementById('vendorAddStatus').textContent = '오류: ' + err.message;
+        })
+        .addVendor(name, contact, email, memo);
+    });
+
+    document.getElementById('vendorRefreshBtn').addEventListener('click', loadVendorList);
+
+    document.getElementById('vendorPreviewBtn').addEventListener('click', function () {
+      var el = document.getElementById('vendorPreviewResult');
+      el.textContent = '확인 중...';
+      google.script.run
+        .withSuccessHandler(function (rows) {
+          if (!rows || !rows.length) {
+            el.textContent = '지금 실행하면 발송될 업체가 없습니다 (등록된 업체가 없거나, 모두 발송 주기가 아직 안 됐거나 회신/보류/수신거부 상태입니다).';
+            return;
+          }
+          el.textContent = '지금 실행하면 ' + rows.length + '건 발송됩니다: ' +
+            rows.map(function (v) { return v.name; }).join(', ');
+        })
+        .withFailureHandler(function (err) { el.textContent = '오류: ' + err.message; })
+        .previewVendorProposals();
+    });
+
+    document.getElementById('vendorSettingsSaveBtn').addEventListener('click', function () {
+      var settings = {
+        subject: document.getElementById('vendorSubject').value,
+        body: document.getElementById('vendorBody').value,
+        intervalDays: document.getElementById('vendorIntervalDays').value,
+        maxDailySend: document.getElementById('vendorMaxDaily').value
+      };
+      document.getElementById('vendorSettingsStatus').textContent = '저장 중...';
+      google.script.run
+        .withSuccessHandler(function () {
+          document.getElementById('vendorSettingsStatus').textContent = '저장 완료! 다음 자동 발송부터 반영됩니다.';
+        })
+        .withFailureHandler(function (err) {
+          document.getElementById('vendorSettingsStatus').textContent = '저장 오류: ' + err.message;
+        })
+        .saveVendorSettings(settings);
     });
 
     // ---------- 대시보드 통계 ----------
