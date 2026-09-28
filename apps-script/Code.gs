@@ -1279,9 +1279,12 @@ function previewVendorEmail(settings) {
   var s = (settings && (settings.subject || settings.body)) ? settings : loadVendorSettings_();
   var sample = { name: '(주)샘플컴퍼니', contact: '김담당', email: 'sample@example.com', memo: '친환경 리필스테이션을 운영하는 제로웨이스트 편집숍' };
   var optOutUrl = ScriptApp.getService().getUrl() + '?optout=샘플토큰';
+  var result = buildVendorEmailBody_(s, sample, optOutUrl);
   return {
     subject: fillVendorTemplate_(s.subject, sample, optOutUrl),
-    body: buildVendorEmailBody_(s, sample, optOutUrl)
+    body: result.body,
+    aiApplied: result.aiApplied,
+    aiReason: result.aiReason
   };
 }
 
@@ -1296,9 +1299,9 @@ function sendTestVendorEmail(toEmail, settings) {
   var sample = { name: '(주)샘플컴퍼니', contact: '김담당', email: toEmail, memo: '친환경 리필스테이션을 운영하는 제로웨이스트 편집숍' };
   var optOutUrl = ScriptApp.getService().getUrl() + '?optout=샘플토큰(테스트)';
   var subject = '[테스트] ' + fillVendorTemplate_(s.subject, sample, optOutUrl);
-  var body = buildVendorEmailBody_(s, sample, optOutUrl);
-  GmailApp.sendEmail(toEmail, subject, body);
-  return { ok: true };
+  var result = buildVendorEmailBody_(s, sample, optOutUrl);
+  GmailApp.sendEmail(toEmail, subject, result.body);
+  return { ok: true, aiApplied: result.aiApplied, aiReason: result.aiReason };
 }
 
 /** 화면에서 호출 — 등록된 업체 목록을 반환합니다. */
@@ -1352,9 +1355,13 @@ function fillVendorTemplate_(template, vendor, optOutUrl) {
  * - 호출이 실패해도(키 없음/오류/과부하) 조용히 빈 문자열을 반환해서, 발송 자체가 막히지 않게 합니다.
  */
 function personalizeVendorOpening_(vendor) {
-  if (!vendor.memo || String(vendor.memo).trim().length < 4) return '';
+  if (!vendor.memo || String(vendor.memo).trim().length < 4) {
+    return { text: '', reason: '메모가 비어있거나 너무 짧습니다(4자 미만). 메모를 적어두면 개인화가 적용됩니다.' };
+  }
   var apiKey = getProp_('GEMINI_API_KEY');
-  if (!apiKey) return '';
+  if (!apiKey) {
+    return { text: '', reason: 'GEMINI_API_KEY가 스크립트 속성에 등록되어 있지 않습니다.' };
+  }
 
   var prompt = [
     '당신은 프릿지(f-ridge.com)의 마케터입니다. 아래 업체에게 보낼 입점 제안 메일의 인사말 바로 다음에',
@@ -1379,11 +1386,15 @@ function personalizeVendorOpening_(vendor) {
       muteHttpExceptions: true
     });
     var data = JSON.parse(res.getContentText());
+    if (res.getResponseCode() !== 200) {
+      return { text: '', reason: 'Gemini 오류: ' + ((data.error && data.error.message) || res.getContentText()) };
+    }
     var parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
     var text = parts ? parts.map(function (p) { return p.text || ''; }).join('').trim() : '';
-    return text;
+    if (!text) return { text: '', reason: 'Gemini가 빈 응답을 반환했습니다.' };
+    return { text: text, reason: null };
   } catch (e) {
-    return ''; // 실패해도 발송이 막히면 안 되므로 조용히 빈 문자열
+    return { text: '', reason: '호출 실패: ' + e.message }; // 실패해도 발송이 막히면 안 되므로 text는 빈 문자열
   }
 }
 
@@ -1391,17 +1402,18 @@ function personalizeVendorOpening_(vendor) {
  * 템플릿을 채운 뒤, AI 개인화가 켜져 있으면 본문 첫 줄(인사말) 다음에 개인화 문장을 삽입합니다.
  * (본문 첫 줄이 인사말이라는 가정 — 기본 템플릿 구조 기준. 템플릿을 완전히 다른 구조로 바꾸면
  * 삽입 위치가 어색할 수 있으니, 그런 경우 AI 개인화는 끄고 쓰는 걸 권장합니다.)
+ * 반환값: { body, aiApplied, aiReason } — aiReason은 적용 안 됐을 때 그 이유(화면에 표시용)
  */
 function buildVendorEmailBody_(settings, vendor, optOutUrl) {
   var body = fillVendorTemplate_(settings.body, vendor, optOutUrl);
-  if (!settings.aiPersonalize) return body;
+  if (!settings.aiPersonalize) return { body: body, aiApplied: false, aiReason: null };
 
-  var opening = personalizeVendorOpening_(vendor);
-  if (!opening) return body;
+  var result = personalizeVendorOpening_(vendor);
+  if (!result.text) return { body: body, aiApplied: false, aiReason: result.reason };
 
   var lines = body.split('\n');
-  lines.splice(1, 0, '', opening);
-  return lines.join('\n');
+  lines.splice(1, 0, '', result.text);
+  return { body: lines.join('\n'), aiApplied: true, aiReason: null };
 }
 
 /** 지금 당장 sendVendorProposals()를 실행하면 누구에게 발송되는지 미리 확인합니다(실제 발송 안 함). */
@@ -1464,10 +1476,13 @@ function sendVendorProposals() {
     var optOutUrl = webAppUrl + '?optout=' + encodeURIComponent(token);
 
     var subject = fillVendorTemplate_(settings.subject, vendor, optOutUrl);
-    var body = buildVendorEmailBody_(settings, vendor, optOutUrl);
+    var bodyResult = buildVendorEmailBody_(settings, vendor, optOutUrl);
+    if (settings.aiPersonalize && !bodyResult.aiApplied) {
+      Logger.log('AI 개인화 적용 안 됨 (' + vendor.email + '): ' + bodyResult.aiReason);
+    }
 
     try {
-      GmailApp.sendEmail(vendor.email, subject, body);
+      GmailApp.sendEmail(vendor.email, subject, bodyResult.body);
       sheet.getRange(i + 1, VENDOR_COLS_.status).setValue('발송완료');
       sheet.getRange(i + 1, VENDOR_COLS_.lastSentAt).setValue(now);
       sheet.getRange(i + 1, VENDOR_COLS_.sentCount).setValue((Number(r[6]) || 0) + 1);

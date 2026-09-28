@@ -1011,6 +1011,7 @@
                 <p class="vendor-preview-subject" id="vendorPreviewSubject"></p>
                 <pre class="vendor-preview-body" id="vendorPreviewBodyText"></pre>
               </div>
+              <p class="status status-note" id="vendorPreviewAiNote"></p>
             </div>
 
             <p class="field-label field-label-spaced">실제 발송 전, 내 메일로 먼저 테스트해보기</p>
@@ -1346,6 +1347,16 @@
           document.getElementById('vendorPreviewBox').hidden = false;
           document.getElementById('vendorPreviewSubject').textContent = res.subject;
           document.getElementById('vendorPreviewBodyText').textContent = res.body;
+          var note = document.getElementById('vendorPreviewAiNote');
+          if (document.getElementById('vendorAiPersonalize').checked) {
+            note.textContent = res.aiApplied
+              ? '✓ AI 개인화가 적용된 결과입니다.'
+              : '✗ AI 개인화가 적용되지 않았습니다 — ' + (res.aiReason || '알 수 없는 이유');
+            note.classList.toggle('error', !res.aiApplied);
+          } else {
+            note.textContent = '';
+            note.classList.remove('error');
+          }
         })
         .withFailureHandler(function (err) { alert('미리보기 오류: ' + err.message); })
         .previewVendorEmail(currentVendorSettingsFromForm_());
@@ -1359,8 +1370,12 @@
       }
       document.getElementById('vendorTestSendStatus').textContent = '발송 중...';
       google.script.run
-        .withSuccessHandler(function () {
-          document.getElementById('vendorTestSendStatus').textContent = '✓ ' + toEmail + '(으)로 테스트 메일을 보냈습니다. 수신함을 확인해보세요.';
+        .withSuccessHandler(function (res) {
+          var msg = '✓ ' + toEmail + '(으)로 테스트 메일을 보냈습니다. 수신함을 확인해보세요.';
+          if (document.getElementById('vendorAiPersonalize').checked) {
+            msg += res.aiApplied ? ' (AI 개인화 적용됨)' : ' (AI 개인화 미적용 — ' + (res.aiReason || '알 수 없는 이유') + ')';
+          }
+          document.getElementById('vendorTestSendStatus').textContent = msg;
         })
         .withFailureHandler(function (err) {
           document.getElementById('vendorTestSendStatus').textContent = '오류: ' + err.message;
