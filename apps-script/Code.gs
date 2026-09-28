@@ -1131,6 +1131,7 @@ var DEFAULT_VENDOR_PROPOSAL_BODY_ = [
 
 var DEFAULT_VENDOR_SEND_INTERVAL_DAYS_ = 14;
 var DEFAULT_VENDOR_MAX_DAILY_SEND_ = 20; // 한 번 실행당 최대 발송 개수 — 평판 보호용 안전장치
+var DEFAULT_VENDOR_AI_PERSONALIZE_ = false; // 기본 꺼짐 — 옵트인 기능
 
 /** 최초 1회 실행: 입점 제안 관련 시트 2개("입점제안_업체리스트", "입점제안_설정")를 만들고 기본값을 채웁니다. */
 function setupVendorOutreachSheets() {
@@ -1144,6 +1145,7 @@ function setupVendorOutreachSheets() {
     settings.appendRow(['Body', DEFAULT_VENDOR_PROPOSAL_BODY_]);
     settings.appendRow(['SendIntervalDays', DEFAULT_VENDOR_SEND_INTERVAL_DAYS_]);
     settings.appendRow(['MaxDailySend', DEFAULT_VENDOR_MAX_DAILY_SEND_]);
+    settings.appendRow(['AiPersonalize', DEFAULT_VENDOR_AI_PERSONALIZE_]);
     settings.setFrozenRows(1);
   }
 
@@ -1157,13 +1159,14 @@ function setupVendorOutreachSheets() {
   return { ok: true, message: '입점 제안 시트 준비 완료' };
 }
 
-/** 입점제안_설정 시트에서 현재 템플릿/발송주기/일일상한을 읽어옵니다. 비어있으면 기본값을 씁니다. */
+/** 입점제안_설정 시트에서 현재 템플릿/발송주기/일일상한/AI개인화 여부를 읽어옵니다. 비어있으면 기본값을 씁니다. */
 function loadVendorSettings_() {
   var result = {
     subject: DEFAULT_VENDOR_PROPOSAL_SUBJECT_,
     body: DEFAULT_VENDOR_PROPOSAL_BODY_,
     intervalDays: DEFAULT_VENDOR_SEND_INTERVAL_DAYS_,
-    maxDailySend: DEFAULT_VENDOR_MAX_DAILY_SEND_
+    maxDailySend: DEFAULT_VENDOR_MAX_DAILY_SEND_,
+    aiPersonalize: DEFAULT_VENDOR_AI_PERSONALIZE_
   };
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_SETTINGS_SHEET_);
   if (!sheet) return result;
@@ -1174,6 +1177,7 @@ function loadVendorSettings_() {
     if (key === 'Body' && val) result.body = String(val);
     if (key === 'SendIntervalDays' && val) result.intervalDays = Number(val) || DEFAULT_VENDOR_SEND_INTERVAL_DAYS_;
     if (key === 'MaxDailySend' && val) result.maxDailySend = Number(val) || DEFAULT_VENDOR_MAX_DAILY_SEND_;
+    if (key === 'AiPersonalize') result.aiPersonalize = (String(val).toLowerCase() === 'true');
   }
   return result;
 }
@@ -1194,7 +1198,8 @@ function saveVendorSettings(settings) {
     Subject: (settings.subject && String(settings.subject).trim()) || DEFAULT_VENDOR_PROPOSAL_SUBJECT_,
     Body: (settings.body && String(settings.body).trim()) || DEFAULT_VENDOR_PROPOSAL_BODY_,
     SendIntervalDays: Number(settings.intervalDays) > 0 ? Number(settings.intervalDays) : DEFAULT_VENDOR_SEND_INTERVAL_DAYS_,
-    MaxDailySend: Number(settings.maxDailySend) > 0 ? Number(settings.maxDailySend) : DEFAULT_VENDOR_MAX_DAILY_SEND_
+    MaxDailySend: Number(settings.maxDailySend) > 0 ? Number(settings.maxDailySend) : DEFAULT_VENDOR_MAX_DAILY_SEND_,
+    AiPersonalize: settings.aiPersonalize ? 'true' : 'false'
   };
 
   var data = sheet.getDataRange().getValues();
@@ -1272,11 +1277,11 @@ function addVendorsBulk(text) {
  */
 function previewVendorEmail(settings) {
   var s = (settings && (settings.subject || settings.body)) ? settings : loadVendorSettings_();
-  var sample = { name: '(주)샘플컴퍼니', contact: '김담당', email: 'sample@example.com' };
+  var sample = { name: '(주)샘플컴퍼니', contact: '김담당', email: 'sample@example.com', memo: '친환경 리필스테이션을 운영하는 제로웨이스트 편집숍' };
   var optOutUrl = ScriptApp.getService().getUrl() + '?optout=샘플토큰';
   return {
     subject: fillVendorTemplate_(s.subject, sample, optOutUrl),
-    body: fillVendorTemplate_(s.body, sample, optOutUrl)
+    body: buildVendorEmailBody_(s, sample, optOutUrl)
   };
 }
 
@@ -1288,10 +1293,10 @@ function previewVendorEmail(settings) {
 function sendTestVendorEmail(toEmail, settings) {
   if (!toEmail) throw new Error('테스트로 받을 이메일 주소를 입력해주세요.');
   var s = (settings && (settings.subject || settings.body)) ? settings : loadVendorSettings_();
-  var sample = { name: '(주)샘플컴퍼니', contact: '김담당', email: toEmail };
+  var sample = { name: '(주)샘플컴퍼니', contact: '김담당', email: toEmail, memo: '친환경 리필스테이션을 운영하는 제로웨이스트 편집숍' };
   var optOutUrl = ScriptApp.getService().getUrl() + '?optout=샘플토큰(테스트)';
   var subject = '[테스트] ' + fillVendorTemplate_(s.subject, sample, optOutUrl);
-  var body = fillVendorTemplate_(s.body, sample, optOutUrl);
+  var body = buildVendorEmailBody_(s, sample, optOutUrl);
   GmailApp.sendEmail(toEmail, subject, body);
   return { ok: true };
 }
@@ -1337,6 +1342,66 @@ function fillVendorTemplate_(template, vendor, optOutUrl) {
     .replace(/\{\{담당자\}\}/g, vendor.contact || '담당자')
     .replace(/\{\{이메일\}\}/g, vendor.email || '')
     .replace(/\{\{수신거부링크\}\}/g, optOutUrl || '');
+}
+
+/**
+ * ===== AI 개인화 (옵트인, 기본 꺼짐) =====
+ * 업체 메모를 참고해서, 본문 첫 줄(인사말) 바로 다음에 넣을 한두 문장짜리 도입부를 제미나이로 다듬습니다.
+ * - 메모가 없거나 너무 짧으면(4자 미만) AI를 호출하지 않고 그냥 빈 문자열(추가 문장 없음)을 반환합니다.
+ * - "훌륭한 철학에 감명받아" 류의 상투적인 AI 문구를 쓰지 않도록 프롬프트에서 명시적으로 금지합니다.
+ * - 호출이 실패해도(키 없음/오류/과부하) 조용히 빈 문자열을 반환해서, 발송 자체가 막히지 않게 합니다.
+ */
+function personalizeVendorOpening_(vendor) {
+  if (!vendor.memo || String(vendor.memo).trim().length < 4) return '';
+  var apiKey = getProp_('GEMINI_API_KEY');
+  if (!apiKey) return '';
+
+  var prompt = [
+    '당신은 프릿지(f-ridge.com)의 마케터입니다. 아래 업체에게 보낼 입점 제안 메일의 인사말 바로 다음에',
+    '들어갈 짧은 도입 문장을 하나 써주세요.',
+    '',
+    '[업체명] ' + (vendor.name || ''),
+    '[이 업체에 대한 메모(담당자가 직접 남긴 내용)] ' + vendor.memo,
+    '',
+    '규칙(반드시 지킬 것):',
+    '1. 한국어로, 담백하고 자연스러운 비즈니스 문체로 쓸 것. 이모지 쓰지 말 것.',
+    '2. "훌륭한 철학에 깊은 감명을 받아", "귀사의 뛰어난" 같은 상투적인 AI스러운 칭찬·아부 문구는 절대 쓰지 말 것.',
+    '3. 메모에 실제로 적힌 내용만 반영하고, 메모에 없는 사실을 지어내지 말 것.',
+    '4. 딱 1문장, 50자 이내로 짧게 쓸 것.',
+    '5. 결과는 그 문장 하나만 출력하고, 따옴표·마크다운·설명을 붙이지 말 것.'
+  ].join('\n');
+
+  try {
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(apiKey);
+    var res = UrlFetchApp.fetch(url, {
+      method: 'post', contentType: 'application/json',
+      payload: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      muteHttpExceptions: true
+    });
+    var data = JSON.parse(res.getContentText());
+    var parts = data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts;
+    var text = parts ? parts.map(function (p) { return p.text || ''; }).join('').trim() : '';
+    return text;
+  } catch (e) {
+    return ''; // 실패해도 발송이 막히면 안 되므로 조용히 빈 문자열
+  }
+}
+
+/**
+ * 템플릿을 채운 뒤, AI 개인화가 켜져 있으면 본문 첫 줄(인사말) 다음에 개인화 문장을 삽입합니다.
+ * (본문 첫 줄이 인사말이라는 가정 — 기본 템플릿 구조 기준. 템플릿을 완전히 다른 구조로 바꾸면
+ * 삽입 위치가 어색할 수 있으니, 그런 경우 AI 개인화는 끄고 쓰는 걸 권장합니다.)
+ */
+function buildVendorEmailBody_(settings, vendor, optOutUrl) {
+  var body = fillVendorTemplate_(settings.body, vendor, optOutUrl);
+  if (!settings.aiPersonalize) return body;
+
+  var opening = personalizeVendorOpening_(vendor);
+  if (!opening) return body;
+
+  var lines = body.split('\n');
+  lines.splice(1, 0, '', opening);
+  return lines.join('\n');
 }
 
 /** 지금 당장 sendVendorProposals()를 실행하면 누구에게 발송되는지 미리 확인합니다(실제 발송 안 함). */
@@ -1393,13 +1458,13 @@ function sendVendorProposals() {
       if (daysSince < settings.intervalDays) continue; // 아직 발송 주기가 안 됨
     }
 
-    var vendor = { name: r[1], contact: r[2], email: r[3] };
+    var vendor = { name: r[1], contact: r[2], email: r[3], memo: r[8] };
     var token = r[9] || Utilities.getUuid();
     if (!r[9]) sheet.getRange(i + 1, VENDOR_COLS_.optOutToken).setValue(token);
     var optOutUrl = webAppUrl + '?optout=' + encodeURIComponent(token);
 
     var subject = fillVendorTemplate_(settings.subject, vendor, optOutUrl);
-    var body = fillVendorTemplate_(settings.body, vendor, optOutUrl);
+    var body = buildVendorEmailBody_(settings, vendor, optOutUrl);
 
     try {
       GmailApp.sendEmail(vendor.email, subject, body);

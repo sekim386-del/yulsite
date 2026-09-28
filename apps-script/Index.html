@@ -439,6 +439,8 @@
       background: var(--paper-sunken); color: var(--ink); cursor: pointer;
     }
     .vendor-empty { text-align: center; color: var(--ink-faint); padding: 18px 0 !important; white-space: normal !important; }
+    .vendor-ai-toggle-label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 13px; color: var(--ink); }
+    .vendor-ai-toggle-label input[type="checkbox"] { margin-top: 3px; flex: none; width: 16px; height: 16px; accent-color: var(--accent-deep); cursor: pointer; }
     .vendor-preview-card {
       margin-top: 8px; padding: 14px 16px; background: var(--paper-sunken); border: 1px solid var(--line);
       border-radius: var(--radius-sm);
@@ -992,6 +994,12 @@
               <label>메일 본문</label>
               <textarea id="vendorBody" class="textarea-xl"></textarea>
             </div>
+            <div class="field vendor-ai-toggle">
+              <label class="vendor-ai-toggle-label">
+                <input type="checkbox" id="vendorAiPersonalize">
+                <span>AI로 도입부 개인화 <span class="field-hint">업체 메모를 참고해 인사말 다음 문장을 제미나이가 자연스럽게 다듬어줍니다 (기본 꺼짐, 메모가 없으면 적용 안 됨)</span></span>
+              </label>
+            </div>
             <button class="reset-btn primary" id="vendorSettingsSaveBtn" type="button">템플릿 저장</button>
             <p class="status status-note" id="vendorSettingsStatus"></p>
 
@@ -1157,6 +1165,7 @@
           document.getElementById('vendorMaxDaily').value = s.maxDailySend;
           document.getElementById('vendorSubject').value = s.subject;
           document.getElementById('vendorBody').value = s.body;
+          document.getElementById('vendorAiPersonalize').checked = !!s.aiPersonalize;
         })
         .withFailureHandler(function (err) {
           document.getElementById('vendorSettingsStatus').textContent = '설정 불러오기 오류: ' + err.message;
@@ -1309,12 +1318,7 @@
     });
 
     document.getElementById('vendorSettingsSaveBtn').addEventListener('click', function () {
-      var settings = {
-        subject: document.getElementById('vendorSubject').value,
-        body: document.getElementById('vendorBody').value,
-        intervalDays: document.getElementById('vendorIntervalDays').value,
-        maxDailySend: document.getElementById('vendorMaxDaily').value
-      };
+      var settings = currentVendorSettingsFromForm_();
       document.getElementById('vendorSettingsStatus').textContent = '저장 중...';
       google.script.run
         .withSuccessHandler(function () {
@@ -1331,7 +1335,8 @@
         subject: document.getElementById('vendorSubject').value,
         body: document.getElementById('vendorBody').value,
         intervalDays: document.getElementById('vendorIntervalDays').value,
-        maxDailySend: document.getElementById('vendorMaxDaily').value
+        maxDailySend: document.getElementById('vendorMaxDaily').value,
+        aiPersonalize: document.getElementById('vendorAiPersonalize').checked
       };
     }
 
