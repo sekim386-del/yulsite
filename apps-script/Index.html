@@ -438,6 +438,14 @@
       font-family: inherit; font-size: 12px; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--line);
       background: var(--paper-sunken); color: var(--ink); cursor: pointer;
     }
+    .vendor-actions { display: flex; gap: 6px; }
+    .vendor-row-btn {
+      font-family: inherit; font-size: 11px; font-weight: 700; color: var(--ink-soft);
+      background: var(--paper-sunken); border: 1px solid var(--line); border-radius: 999px;
+      padding: 4px 10px; cursor: pointer; transition: all .15s ease; flex: none;
+    }
+    .vendor-row-btn:hover { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-tint); }
+    .vendor-row-btn.danger:hover { border-color: var(--danger); color: var(--danger); background: #fdf1ef; }
     .vendor-empty { text-align: center; color: var(--ink-faint); padding: 18px 0 !important; white-space: normal !important; }
     .vendor-ai-toggle-label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 13px; color: var(--ink); }
     .vendor-ai-toggle-label input[type="checkbox"] { margin-top: 3px; flex: none; width: 16px; height: 16px; accent-color: var(--accent-deep); cursor: pointer; }
@@ -936,7 +944,10 @@
               <label>메모 <span class="field-hint">선택사항</span></label>
               <input type="text" id="vendorMemo" placeholder="어디서 발굴했는지, 특이사항 등">
             </div>
-            <button class="reset-btn primary" id="vendorAddBtn" type="button">업체 등록</button>
+            <div class="btn-row" style="margin-top:0;">
+              <button class="reset-btn primary" id="vendorAddBtn" type="button">업체 등록</button>
+              <button class="reset-btn" id="vendorEditCancelBtn" type="button" hidden>수정 취소</button>
+            </div>
             <p class="status status-note" id="vendorAddStatus"></p>
 
             <p class="field-label field-label-spaced">여러 업체 한 번에 등록 <span class="muted">한 줄에 하나씩, "업체명,담당자,이메일,메모" 형식 (담당자·메모는 비워도 됨)</span></p>
@@ -958,10 +969,10 @@
             <div class="table-scroll">
               <table class="vendor-table" id="vendorTable">
                 <thead>
-                  <tr><th>업체명</th><th>담당자</th><th>이메일</th><th>상태</th><th>최근발송</th><th>발송횟수</th><th>메모</th></tr>
+                  <tr><th>업체명</th><th>담당자</th><th>이메일</th><th>상태</th><th>최근발송</th><th>발송횟수</th><th>메모</th><th>작업</th></tr>
                 </thead>
                 <tbody id="vendorTableBody">
-                  <tr><td colspan="7" class="vendor-empty">등록된 업체가 없습니다.</td></tr>
+                  <tr><td colspan="8" class="vendor-empty">등록된 업체가 없습니다.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1187,13 +1198,16 @@
       document.getElementById('vendorStatDone').innerHTML = done + '<span class="unit">곳</span>';
     }
 
+    var vendorRowsCache_ = [];
+
     function loadVendorList() {
       var tbody = document.getElementById('vendorTableBody');
       google.script.run
         .withSuccessHandler(function (rows) {
+          vendorRowsCache_ = rows || [];
           updateVendorStats_(rows);
           if (!rows || !rows.length) {
-            tbody.innerHTML = '<tr><td colspan="7" class="vendor-empty">등록된 업체가 없습니다.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="vendor-empty">등록된 업체가 없습니다.</td></tr>';
             return;
           }
           tbody.innerHTML = rows.map(function (v) {
@@ -1209,6 +1223,10 @@
               '<td>' + lastSent + '</td>' +
               '<td>' + (v.sentCount || 0) + '</td>' +
               '<td class="memo-cell">' + escapeHtml(v.memo || '') + '</td>' +
+              '<td class="vendor-actions">' +
+                '<button type="button" class="vendor-row-btn" data-action="edit" data-id="' + escapeHtml(v.id) + '">수정</button>' +
+                '<button type="button" class="vendor-row-btn danger" data-action="delete" data-id="' + escapeHtml(v.id) + '">삭제</button>' +
+              '</td>' +
               '</tr>';
           }).join('');
           tbody.querySelectorAll('.vendor-status-select').forEach(function (sel) {
@@ -1218,12 +1236,31 @@
                 .updateVendorStatus(sel.dataset.id, sel.value);
             });
           });
+          tbody.querySelectorAll('[data-action="edit"]').forEach(function (btn) {
+            btn.addEventListener('click', function () { startEditVendor_(btn.dataset.id); });
+          });
+          tbody.querySelectorAll('[data-action="delete"]').forEach(function (btn) {
+            btn.addEventListener('click', function () { deleteVendorRow_(btn.dataset.id); });
+          });
         })
         .withFailureHandler(function (err) {
-          tbody.innerHTML = '<tr><td colspan="7" class="vendor-empty">불러오기 오류: ' + escapeHtml(err.message) + '</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="8" class="vendor-empty">불러오기 오류: ' + escapeHtml(err.message) + '</td></tr>';
         })
         .getVendorList();
     }
+
+    function deleteVendorRow_(id) {
+      var v = vendorRowsCache_.find(function (r) { return r.id === id; });
+      if (!confirm((v ? v.name : '이 업체') + '를 목록에서 삭제할까요? (되돌릴 수 없습니다)')) return;
+      google.script.run
+        .withSuccessHandler(function () {
+          if (vendorEditingId_ === id) cancelEditVendor_();
+          loadVendorList();
+        })
+        .withFailureHandler(function (err) { alert('삭제 오류: ' + err.message); })
+        .deleteVendor(id);
+    }
+
 
     document.getElementById('vendorSetupBtn').addEventListener('click', function () {
       document.getElementById('vendorSetupStatus').textContent = '설정 중...';
@@ -1252,6 +1289,34 @@
         .installVendorOutreachTriggers();
     });
 
+    var vendorEditingId_ = null;
+
+    function startEditVendor_(id) {
+      var v = vendorRowsCache_.find(function (r) { return r.id === id; });
+      if (!v) return;
+      vendorEditingId_ = id;
+      document.getElementById('vendorName').value = v.name || '';
+      document.getElementById('vendorContact').value = v.contact || '';
+      document.getElementById('vendorEmail').value = v.email || '';
+      document.getElementById('vendorMemo').value = v.memo || '';
+      document.getElementById('vendorAddBtn').textContent = '수정 저장';
+      document.getElementById('vendorEditCancelBtn').hidden = false;
+      document.getElementById('vendorAddStatus').textContent = '"' + v.name + '" 수정 중 — 내용을 고친 뒤 "수정 저장"을 눌러주세요.';
+      document.getElementById('vendorName').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function cancelEditVendor_() {
+      vendorEditingId_ = null;
+      ['vendorName', 'vendorContact', 'vendorEmail', 'vendorMemo'].forEach(function (id) {
+        document.getElementById(id).value = '';
+      });
+      document.getElementById('vendorAddBtn').textContent = '업체 등록';
+      document.getElementById('vendorEditCancelBtn').hidden = true;
+      document.getElementById('vendorAddStatus').textContent = '';
+    }
+
+    document.getElementById('vendorEditCancelBtn').addEventListener('click', cancelEditVendor_);
+
     document.getElementById('vendorAddBtn').addEventListener('click', function () {
       var name = document.getElementById('vendorName').value.trim();
       var contact = document.getElementById('vendorContact').value.trim();
@@ -1261,19 +1326,26 @@
         document.getElementById('vendorAddStatus').textContent = '업체명과 이메일은 필수입니다.';
         return;
       }
-      document.getElementById('vendorAddStatus').textContent = '등록 중...';
-      google.script.run
+      var editingId = vendorEditingId_;
+      document.getElementById('vendorAddStatus').textContent = editingId ? '수정 저장 중...' : '등록 중...';
+      var call = google.script.run
         .withSuccessHandler(function () {
-          document.getElementById('vendorAddStatus').textContent = '✓ 등록 완료';
-          ['vendorName', 'vendorContact', 'vendorEmail', 'vendorMemo'].forEach(function (id) {
-            document.getElementById(id).value = '';
-          });
+          document.getElementById('vendorAddStatus').textContent = editingId ? '✓ 수정 완료' : '✓ 등록 완료';
+          if (editingId) cancelEditVendor_(); else {
+            ['vendorName', 'vendorContact', 'vendorEmail', 'vendorMemo'].forEach(function (id) {
+              document.getElementById(id).value = '';
+            });
+          }
           loadVendorList();
         })
         .withFailureHandler(function (err) {
           document.getElementById('vendorAddStatus').textContent = '오류: ' + err.message;
-        })
-        .addVendor(name, contact, email, memo);
+        });
+      if (editingId) {
+        call.updateVendor(editingId, name, contact, email, memo);
+      } else {
+        call.addVendor(name, contact, email, memo);
+      }
     });
 
     document.getElementById('vendorRefreshBtn').addEventListener('click', loadVendorList);

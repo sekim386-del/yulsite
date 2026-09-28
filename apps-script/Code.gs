@@ -1349,6 +1349,38 @@ function updateVendorStatus(id, status) {
   return { ok: false };
 }
 
+/** 화면에서 호출 — 업체명/담당자/이메일/메모를 수정합니다 (상태·발송이력 등은 건드리지 않음). */
+function updateVendor(id, name, contact, email, memo) {
+  if (!name || !email) throw new Error('업체명과 이메일은 필수입니다.');
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_SHEET_);
+  if (!sheet) return { ok: false };
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === id) {
+      sheet.getRange(i + 1, VENDOR_COLS_.name).setValue(name);
+      sheet.getRange(i + 1, VENDOR_COLS_.contact).setValue(contact || '');
+      sheet.getRange(i + 1, VENDOR_COLS_.email).setValue(email);
+      sheet.getRange(i + 1, VENDOR_COLS_.memo).setValue(memo || '');
+      return { ok: true };
+    }
+  }
+  return { ok: false };
+}
+
+/** 화면에서 호출 — 업체를 목록에서 완전히 삭제합니다 (되돌릴 수 없음). */
+function deleteVendor(id) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_SHEET_);
+  if (!sheet) return { ok: false };
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === id) {
+      sheet.deleteRow(i + 1);
+      return { ok: true };
+    }
+  }
+  return { ok: false };
+}
+
 /** 템플릿의 {{업체명}} 등 플레이스홀더를 실제 값으로 치환합니다. */
 function fillVendorTemplate_(template, vendor, optOutUrl) {
   return String(template || '')
