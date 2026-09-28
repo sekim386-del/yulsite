@@ -234,6 +234,9 @@ function setBrandRuleValue_(sheet, key, value) {
 }
 
 function doGet(e) {
+  if (e && e.parameter && e.parameter.optout) {
+    return handleVendorOptOut_(e.parameter.optout);
+  }
   if (e && e.parameter && e.parameter.code) {
     return handleThreadsOAuthCallback_(e.parameter.code);
   }
@@ -1068,4 +1071,312 @@ function postThreads(imageUrl, caption) {
   } catch (e) { /* permalink 조회 실패는 무시 */ }
 
   return { id: pubData.id, url: permalink };
+}
+
+/**
+ * ===================================================================
+ * 입점 제안 이메일 자동화 (신규 입점사 발굴 아웃리치)
+ * ===================================================================
+ * 재사용 가능한 패턴: "시트 기반 관리(CRM) + 시간 기반 트리거로 자동 실행 + Gmail 발송".
+ * 나중에 비슷한 요청(정기적으로 뭔가 자동 발송/자동 확인)이 오면 이 구조를 거의 그대로 복사해 쓰면 됩니다.
+ *
+ * 설계 원칙(중요):
+ * - 후보 업체는 절대 자동으로 수집하지 않습니다. 정보통신망법상 웹사이트에서 자동 수집한
+ *   주소로 광고성 메일을 보내는 것은 규제 대상이라, 담당자가 직접 확보한 연락처만
+ *   "입점제안_업체리스트" 시트에 직접 입력해서 씁니다.
+ * - 메일 제목/본문은 "입점제안_설정" 시트에서 코드 수정·재배포 없이 바로 고칠 수 있습니다.
+ * - GmailApp으로 발송하므로, 스크립트를 실행하는 구글 계정의 이름으로 메일이 나갑니다.
+ *   "@yulsight.com" 주소로 보내려면 그 계정 자체가 Google Workspace(유료) 계정이어야 합니다.
+ * - 하루 발송 상한(MaxDailySend)으로 한 번에 너무 많이 보내 스팸 처리되는 걸 방지합니다.
+ * - 메일 본문에 수신거부 링크가 자동 삽입되고, 클릭하면 자동으로 발송 대상에서 제외됩니다.
+ * - 회신 자동 확인은 "답장이 왔는지 여부"만 확인합니다(Gmail 검색). 내용 판단(관심 있음/없음 등)은
+ *   자동화되지 않으므로, 실제 입점 진행 여부는 담당자가 답장을 읽고 시트에서 직접 상태를 바꿔야 합니다.
+ *
+ * ===== 사용법 =====
+ * 1. setupVendorOutreachSheets()를 한 번 실행해 시트 2개를 만듭니다.
+ * 2. "입점제안_업체리스트" 시트에 업체명/담당자/이메일을 입력합니다(상태·최근발송일 등은 비워두면 됩니다).
+ * 3. "입점제안_설정" 시트에서 메일 제목/본문을 필요하면 수정합니다(플레이스홀더: {{업체명}}, {{담당자}}, {{이메일}}, {{수신거부링크}}).
+ * 4. installVendorOutreachTriggers()를 한 번 실행하면, 이후 2주마다 자동 발송 + 매일 회신 자동 확인이 시작됩니다.
+ *    (실행 시 Gmail 권한 승인 화면이 뜨면 승인해주세요 — 최초 1회만 필요합니다.)
+ * 5. 궁금하면 previewVendorProposals()를 실행해서 "다음 실행 때 누구에게 보내질지" 미리 확인할 수 있습니다.
+ */
+
+var VENDOR_SHEET_ = '입점제안_업체리스트';
+var VENDOR_SETTINGS_SHEET_ = '입점제안_설정';
+
+/** 시트 열 번호(1-indexed) — 업체리스트 시트 기준 */
+var VENDOR_COLS_ = {
+  id: 1, name: 2, contact: 3, email: 4, status: 5,
+  lastSentAt: 6, sentCount: 7, createdAt: 8, memo: 9, optOutToken: 10
+};
+
+var VENDOR_SKIP_STATUSES_ = ['회신됨', '입점완료', '보류', '수신거부'];
+
+var DEFAULT_VENDOR_PROPOSAL_SUBJECT_ = '[프릿지] {{업체명}}님, ESG 가치소비 플랫폼 프릿지 입점 제안드립니다';
+var DEFAULT_VENDOR_PROPOSAL_BODY_ = [
+  '안녕하세요, {{업체명}} {{담당자}}님.',
+  '',
+  '친환경·제로웨이스트·업사이클·비건·동물복지 등 ESG 가치소비를 지향하는 플랫폼 "프릿지(f-ridge.com)"입니다.',
+  '',
+  '{{업체명}}의 상품/서비스가 프릿지가 소개하는 가치와 잘 맞는다고 판단되어 입점을 제안드리고자 합니다.',
+  '관심 있으시면 이 메일에 회신 주시면 상세 안내드리겠습니다.',
+  '',
+  '감사합니다.',
+  '프릿지 드림',
+  '',
+  '---',
+  '이 메일은 입점 제안을 위해 개별적으로 발송되었습니다. 더 이상 수신을 원치 않으시면 아래 링크를 클릭해주세요.',
+  '{{수신거부링크}}'
+].join('\n');
+
+var DEFAULT_VENDOR_SEND_INTERVAL_DAYS_ = 14;
+var DEFAULT_VENDOR_MAX_DAILY_SEND_ = 20; // 한 번 실행당 최대 발송 개수 — 평판 보호용 안전장치
+
+/** 최초 1회 실행: 입점 제안 관련 시트 2개("입점제안_업체리스트", "입점제안_설정")를 만들고 기본값을 채웁니다. */
+function setupVendorOutreachSheets() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  var settings = ss.getSheetByName(VENDOR_SETTINGS_SHEET_);
+  if (!settings) {
+    settings = ss.insertSheet(VENDOR_SETTINGS_SHEET_);
+    settings.appendRow(['항목', '값']);
+    settings.appendRow(['Subject', DEFAULT_VENDOR_PROPOSAL_SUBJECT_]);
+    settings.appendRow(['Body', DEFAULT_VENDOR_PROPOSAL_BODY_]);
+    settings.appendRow(['SendIntervalDays', DEFAULT_VENDOR_SEND_INTERVAL_DAYS_]);
+    settings.appendRow(['MaxDailySend', DEFAULT_VENDOR_MAX_DAILY_SEND_]);
+    settings.setFrozenRows(1);
+  }
+
+  var vendors = ss.getSheetByName(VENDOR_SHEET_);
+  if (!vendors) {
+    vendors = ss.insertSheet(VENDOR_SHEET_);
+    vendors.appendRow(['ID', '업체명', '담당자', '이메일', '상태', '최근발송일', '발송횟수', '등록일', '메모', '수신거부토큰']);
+    vendors.setFrozenRows(1);
+  }
+
+  return { ok: true, message: '입점 제안 시트 준비 완료' };
+}
+
+/** 입점제안_설정 시트에서 현재 템플릿/발송주기/일일상한을 읽어옵니다. 비어있으면 기본값을 씁니다. */
+function loadVendorSettings_() {
+  var result = {
+    subject: DEFAULT_VENDOR_PROPOSAL_SUBJECT_,
+    body: DEFAULT_VENDOR_PROPOSAL_BODY_,
+    intervalDays: DEFAULT_VENDOR_SEND_INTERVAL_DAYS_,
+    maxDailySend: DEFAULT_VENDOR_MAX_DAILY_SEND_
+  };
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_SETTINGS_SHEET_);
+  if (!sheet) return result;
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var key = data[i][0], val = data[i][1];
+    if (key === 'Subject' && val) result.subject = String(val);
+    if (key === 'Body' && val) result.body = String(val);
+    if (key === 'SendIntervalDays' && val) result.intervalDays = Number(val) || DEFAULT_VENDOR_SEND_INTERVAL_DAYS_;
+    if (key === 'MaxDailySend' && val) result.maxDailySend = Number(val) || DEFAULT_VENDOR_MAX_DAILY_SEND_;
+  }
+  return result;
+}
+
+/** 업체 하나를 등록합니다(자동 수집 없음 — 담당자가 직접 입력). 화면 또는 스크립트 편집기에서 직접 호출 가능. */
+function addVendor(name, contact, email, memo) {
+  if (!name || !email) throw new Error('업체명과 이메일은 필수입니다.');
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(VENDOR_SHEET_);
+  if (!sheet) { setupVendorOutreachSheets(); sheet = ss.getSheetByName(VENDOR_SHEET_); }
+
+  var id = 'VEND_' + new Date().getTime();
+  var token = Utilities.getUuid();
+  sheet.appendRow([id, name, contact || '', email, '대기중', '', 0, new Date(), memo || '', token]);
+  return { ok: true, id: id };
+}
+
+/** 화면에서 호출 — 등록된 업체 목록을 반환합니다. */
+function getVendorList() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_SHEET_);
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var rows = [];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (!r[0]) continue;
+    rows.push({
+      id: r[0], name: r[1], contact: r[2], email: r[3], status: r[4] || '대기중',
+      lastSentAt: r[5] ? new Date(r[5]).toISOString() : '',
+      sentCount: r[6] || 0,
+      createdAt: r[7] ? new Date(r[7]).toISOString() : '',
+      memo: r[8] || ''
+    });
+  }
+  return rows;
+}
+
+/** 화면에서 호출 — 업체 상태를 담당자가 직접 변경합니다 (예: 회신 내용 확인 후 "입점완료"로 표시). */
+function updateVendorStatus(id, status) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_SHEET_);
+  if (!sheet) return { ok: false };
+  var data = sheet.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === id) {
+      sheet.getRange(i + 1, VENDOR_COLS_.status).setValue(status);
+      return { ok: true };
+    }
+  }
+  return { ok: false };
+}
+
+/** 템플릿의 {{업체명}} 등 플레이스홀더를 실제 값으로 치환합니다. */
+function fillVendorTemplate_(template, vendor, optOutUrl) {
+  return String(template || '')
+    .replace(/\{\{업체명\}\}/g, vendor.name || '')
+    .replace(/\{\{담당자\}\}/g, vendor.contact || '담당자')
+    .replace(/\{\{이메일\}\}/g, vendor.email || '')
+    .replace(/\{\{수신거부링크\}\}/g, optOutUrl || '');
+}
+
+/** 지금 당장 sendVendorProposals()를 실행하면 누구에게 발송되는지 미리 확인합니다(실제 발송 안 함). */
+function previewVendorProposals() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_SHEET_);
+  if (!sheet) return [];
+  var settings = loadVendorSettings_();
+  var data = sheet.getDataRange().getValues();
+  var now = new Date();
+  var preview = [];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (!r[0] || !r[3]) continue;
+    var status = r[4] || '대기중';
+    if (VENDOR_SKIP_STATUSES_.indexOf(status) !== -1) continue;
+    var lastSentAt = r[5] ? new Date(r[5]) : null;
+    if (lastSentAt) {
+      var daysSince = (now.getTime() - lastSentAt.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSince < settings.intervalDays) continue;
+    }
+    preview.push({ name: r[1], email: r[3], status: status });
+    if (preview.length >= settings.maxDailySend) break;
+  }
+  return preview;
+}
+
+/**
+ * ===== 시간 기반 트리거로 2주마다 자동 실행 =====
+ * 발송 대상(대기중이거나, 이전 발송 후 설정된 주기가 지난 업체)에게 입점 제안 메일을 보냅니다.
+ * 하루 발송 상한(MaxDailySend)을 넘지 않도록 제한해서 스팸 처리를 방지합니다.
+ * 회신됨/입점완료/보류/수신거부 상태인 업체는 건너뜁니다.
+ */
+function sendVendorProposals() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(VENDOR_SHEET_);
+  if (!sheet) { Logger.log('입점제안_업체리스트 시트가 없습니다. setupVendorOutreachSheets()를 먼저 실행하세요.'); return { ok: false, sentCount: 0 }; }
+
+  var settings = loadVendorSettings_();
+  var webAppUrl = ScriptApp.getService().getUrl();
+  var data = sheet.getDataRange().getValues();
+  var now = new Date();
+  var sentThisRun = 0;
+
+  for (var i = 1; i < data.length; i++) {
+    if (sentThisRun >= settings.maxDailySend) break;
+    var r = data[i];
+    if (!r[0] || !r[3]) continue; // ID/이메일 없으면 건너뜀
+    var status = r[4] || '대기중';
+    if (VENDOR_SKIP_STATUSES_.indexOf(status) !== -1) continue;
+
+    var lastSentAt = r[5] ? new Date(r[5]) : null;
+    if (lastSentAt) {
+      var daysSince = (now.getTime() - lastSentAt.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysSince < settings.intervalDays) continue; // 아직 발송 주기가 안 됨
+    }
+
+    var vendor = { name: r[1], contact: r[2], email: r[3] };
+    var token = r[9] || Utilities.getUuid();
+    if (!r[9]) sheet.getRange(i + 1, VENDOR_COLS_.optOutToken).setValue(token);
+    var optOutUrl = webAppUrl + '?optout=' + encodeURIComponent(token);
+
+    var subject = fillVendorTemplate_(settings.subject, vendor, optOutUrl);
+    var body = fillVendorTemplate_(settings.body, vendor, optOutUrl);
+
+    try {
+      GmailApp.sendEmail(vendor.email, subject, body);
+      sheet.getRange(i + 1, VENDOR_COLS_.status).setValue('발송완료');
+      sheet.getRange(i + 1, VENDOR_COLS_.lastSentAt).setValue(now);
+      sheet.getRange(i + 1, VENDOR_COLS_.sentCount).setValue((Number(r[6]) || 0) + 1);
+      sentThisRun++;
+    } catch (e) {
+      Logger.log('발송 실패 (' + vendor.email + '): ' + e.message);
+    }
+  }
+
+  Logger.log('이번 실행에서 ' + sentThisRun + '건 발송했습니다.');
+  return { ok: true, sentCount: sentThisRun };
+}
+
+/**
+ * ===== 매일 트리거로 자동 실행 =====
+ * 이미 발송했던("발송완료" 상태) 업체의 이메일 주소로부터 최근 30일 내 답장이 왔는지 Gmail에서
+ * 확인해, 있으면 자동으로 "회신됨" 상태로 바꿔줍니다. 답장 "내용"까지는 판단하지 않으므로,
+ * 실제 입점 진행 여부는 담당자가 답장을 읽고 updateVendorStatus()나 시트에서 직접 갱신해야 합니다.
+ */
+function checkVendorReplies() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_SHEET_);
+  if (!sheet) return;
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (!r[0] || !r[3]) continue;
+    if ((r[4] || '') !== '발송완료') continue; // 발송한 적 있는 업체만 확인
+
+    try {
+      var threads = GmailApp.search('from:' + r[3] + ' newer_than:30d', 0, 1);
+      if (threads.length > 0) {
+        sheet.getRange(i + 1, VENDOR_COLS_.status).setValue('회신됨');
+      }
+    } catch (e) {
+      Logger.log('회신 확인 실패 (' + r[3] + '): ' + e.message);
+    }
+  }
+}
+
+/** 수신거부 링크 클릭 시 doGet()에서 호출 — 해당 업체를 자동으로 발송 대상에서 제외합니다. */
+function handleVendorOptOut_(token) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_SHEET_);
+  var found = false;
+  if (sheet) {
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][9] === token) {
+        sheet.getRange(i + 1, VENDOR_COLS_.status).setValue('수신거부');
+        found = true;
+        break;
+      }
+    }
+  }
+  return HtmlService.createHtmlOutput(
+    '<div style="font-family:sans-serif;padding:40px;text-align:center;">' +
+    (found
+      ? '<h2>✅ 수신거부 처리되었습니다</h2><p>더 이상 입점 제안 메일이 발송되지 않습니다.</p>'
+      : '<h2>처리할 수 없습니다</h2><p>유효하지 않거나 만료된 링크입니다.</p>') +
+    '</div>'
+  );
+}
+
+/**
+ * ===== 최초 1회 실행 =====
+ * 입점 제안 자동 발송(2주마다 월요일 오전 10시)과 회신 자동 확인(매일 오전 9시) 트리거를 설치합니다.
+ * 이미 같은 이름으로 등록된 트리거가 있으면 먼저 지우고 다시 설치합니다(중복 설치 방지).
+ * 실행 시 Gmail 권한 승인 화면이 뜨면 승인해주세요.
+ */
+function installVendorOutreachTriggers() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    var fn = t.getHandlerFunction();
+    if (fn === 'sendVendorProposals' || fn === 'checkVendorReplies') {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+
+  ScriptApp.newTrigger('sendVendorProposals').timeBased().everyWeeks(2).onWeekDay(ScriptApp.WeekDay.MONDAY).atHour(10).create();
+  ScriptApp.newTrigger('checkVendorReplies').timeBased().everyDays(1).atHour(9).create();
+
+  return { ok: true, message: '트리거 설치 완료: 2주마다 월요일 오전 10시 자동 발송, 매일 오전 9시 회신 확인' };
 }
