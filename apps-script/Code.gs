@@ -997,6 +997,32 @@ function getPublishCalendar() {
 }
 
 /**
+ * 발행 캘린더용: 입점 제안 발송 이력을 getPublishCalendar()와 같은 모양({channels:{...}})으로
+ * 변환해서 반환합니다 — 캘린더 화면이 콘텐츠 발행과 입점 제안 발송을 한 화면에서 같이 보여줄 수 있게 합니다.
+ * "최근발송일"이 있는 업체마다 1건씩 표시됩니다(발송 시마다 갱신되는 값이라 발송 시점 자체의
+ * 이력이 여러 건 쌓이진 않지만, 최소한 "가장 최근 언제 나갔는지"는 캘린더에서 바로 확인 가능합니다).
+ */
+function getVendorCalendarEvents() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_SHEET_);
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var rows = [];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (!r[0] || !r[5]) continue; // 최근발송일(F열, index 5)이 있는 업체만
+    rows.push({
+      id: r[0],
+      date: new Date(r[5]).toISOString(),
+      contentType: '입점 제안',
+      targetBrand: r[1] || '',
+      channels: { vendor: true },
+      urls: {}
+    });
+  }
+  return rows;
+}
+
+/**
  * 화면의 "발행" 버튼에서 호출하는 함수 — 이미지 업로드 → 채널별 발행 → 이력 갱신을 한 번에 처리합니다.
  * historyId: generateContent()가 반환한 ID (Content_History 행 식별용)
  * channel: 'instagram' | 'threads'

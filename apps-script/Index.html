@@ -38,6 +38,7 @@
       --cal-threads: #3d5a80;
       --cal-naver: #c9a227;
       --cal-magazine: #a13d5c;
+      --cal-vendor: #7a5cc9;
     }
     * { box-sizing: border-box; }
     ::selection { background: var(--olive-soft); color: var(--accent-deep); }
@@ -418,6 +419,7 @@
     .cal-ch-row { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-soft); }
     .cal-ch-name { font-weight: 600; flex: 1; }
     .cal-ch-link { font-size: 10.5px; font-weight: 700; color: var(--accent-deep); text-decoration: none; flex: none; }
+    .cal-vendor-hint { font-size: 10.5px; color: var(--ink-faint); flex: none; }
     .cal-ch-link:hover { text-decoration: underline; }
     .cal-cancel-btn {
       font-family: inherit; font-size: 10.5px; font-weight: 700; color: var(--ink-faint);
@@ -439,6 +441,12 @@
       background: var(--paper-sunken); color: var(--ink); cursor: pointer;
     }
     .vendor-actions { display: flex; gap: 6px; }
+    .vendor-filter-row { display: flex; gap: 8px; margin: 14px 0 4px; flex-wrap: wrap; }
+    .vendor-filter-row input[type="text"] { flex: 1; min-width: 180px; }
+    .vendor-filter-row select {
+      font-family: inherit; font-size: 13px; padding: 10px 12px; border-radius: var(--radius-sm);
+      border: 1px solid var(--line); background: var(--paper-sunken); color: var(--ink); cursor: pointer; flex: none;
+    }
     .vendor-row-btn {
       font-family: inherit; font-size: 11px; font-weight: 700; color: var(--ink-soft);
       background: var(--paper-sunken); border: 1px solid var(--line); border-radius: 999px;
@@ -742,6 +750,7 @@
               <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--cal-threads)"></span>스레드</span>
               <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--cal-naver)"></span>네이버 블로그</span>
               <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--cal-magazine)"></span>프릿지 매거진</span>
+              <span class="cal-legend-item"><span class="cal-dot" style="--c:var(--cal-vendor)"></span>입점 제안</span>
             </div>
             <div class="cal-weekdays">
               <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
@@ -981,6 +990,12 @@
                 <button class="reset-btn" id="vendorRefreshBtn" type="button">새로고침</button>
               </div>
             </div>
+            <div class="vendor-filter-row">
+              <input type="text" id="vendorSearchInput" placeholder="업체명·담당자·이메일·메모 검색">
+              <select id="vendorStatusFilter">
+                <option value="">전체 상태</option>
+              </select>
+            </div>
             <p class="status status-note" id="vendorPreviewResult"></p>
             <div class="table-scroll">
               <table class="vendor-table" id="vendorTable">
@@ -1188,6 +1203,15 @@
 
     // ---------- 입점 제안 탭 ----------
     var VENDOR_STATUS_OPTIONS_ = ['대기중', '발송완료', '회신됨', '입점완료', '보류', '수신거부'];
+    (function () {
+      var sel = document.getElementById('vendorStatusFilter');
+      VENDOR_STATUS_OPTIONS_.forEach(function (s) {
+        var opt = document.createElement('option');
+        opt.value = s;
+        opt.textContent = s;
+        sel.appendChild(opt);
+      });
+    })();
 
     function loadVendorTab() {
       loadVendorList();
@@ -1222,6 +1246,63 @@
 
     var vendorRowsCache_ = [];
 
+    function renderVendorRows_(rows) {
+      var tbody = document.getElementById('vendorTableBody');
+      if (!rows || !rows.length) {
+        var msg = vendorRowsCache_.length ? '검색/필터 조건에 맞는 업체가 없습니다.' : '등록된 업체가 없습니다.';
+        tbody.innerHTML = '<tr><td colspan="8" class="vendor-empty">' + msg + '</td></tr>';
+        return;
+      }
+      tbody.innerHTML = rows.map(function (v) {
+        var lastSent = v.lastSentAt ? new Date(v.lastSentAt).toLocaleDateString('ko-KR') : '-';
+        var options = VENDOR_STATUS_OPTIONS_.map(function (s) {
+          return '<option value="' + s + '"' + (s === v.status ? ' selected' : '') + '>' + s + '</option>';
+        }).join('');
+        return '<tr>' +
+          '<td>' + escapeHtml(v.name) + '</td>' +
+          '<td>' + escapeHtml(v.contact || '-') + '</td>' +
+          '<td>' + escapeHtml(v.email) + '</td>' +
+          '<td><select class="vendor-status-select" data-id="' + escapeHtml(v.id) + '">' + options + '</select></td>' +
+          '<td>' + lastSent + '</td>' +
+          '<td>' + (v.sentCount || 0) + '</td>' +
+          '<td class="memo-cell">' + escapeHtml(v.memo || '') + '</td>' +
+          '<td class="vendor-actions">' +
+            '<button type="button" class="vendor-row-btn" data-action="edit" data-id="' + escapeHtml(v.id) + '">수정</button>' +
+            '<button type="button" class="vendor-row-btn danger" data-action="delete" data-id="' + escapeHtml(v.id) + '">삭제</button>' +
+          '</td>' +
+          '</tr>';
+      }).join('');
+      tbody.querySelectorAll('.vendor-status-select').forEach(function (sel) {
+        sel.addEventListener('change', function () {
+          google.script.run
+            .withFailureHandler(function (err) { alert('상태 변경 오류: ' + err.message); })
+            .updateVendorStatus(sel.dataset.id, sel.value);
+        });
+      });
+      tbody.querySelectorAll('[data-action="edit"]').forEach(function (btn) {
+        btn.addEventListener('click', function () { startEditVendor_(btn.dataset.id); });
+      });
+      tbody.querySelectorAll('[data-action="delete"]').forEach(function (btn) {
+        btn.addEventListener('click', function () { deleteVendorRow_(btn.dataset.id); });
+      });
+    }
+
+    /** 검색어/상태 필터를 캐시된 목록(vendorRowsCache_)에 적용해 다시 그립니다 (서버 재조회 없음). */
+    function applyVendorFilter_() {
+      var q = document.getElementById('vendorSearchInput').value.trim().toLowerCase();
+      var statusFilter = document.getElementById('vendorStatusFilter').value;
+      var filtered = vendorRowsCache_.filter(function (v) {
+        if (statusFilter && v.status !== statusFilter) return false;
+        if (!q) return true;
+        var haystack = [v.name, v.contact, v.email, v.memo].join(' ').toLowerCase();
+        return haystack.indexOf(q) !== -1;
+      });
+      renderVendorRows_(filtered);
+    }
+
+    document.getElementById('vendorSearchInput').addEventListener('input', applyVendorFilter_);
+    document.getElementById('vendorStatusFilter').addEventListener('change', applyVendorFilter_);
+
     function loadVendorList() {
       var tbody = document.getElementById('vendorTableBody');
       document.getElementById('vendorPreviewResult').textContent = ''; // 목록이 바뀌면 예전 미리보기 결과는 지워서 헷갈리지 않게 함
@@ -1229,42 +1310,7 @@
         .withSuccessHandler(function (rows) {
           vendorRowsCache_ = rows || [];
           updateVendorStats_(rows);
-          if (!rows || !rows.length) {
-            tbody.innerHTML = '<tr><td colspan="8" class="vendor-empty">등록된 업체가 없습니다.</td></tr>';
-            return;
-          }
-          tbody.innerHTML = rows.map(function (v) {
-            var lastSent = v.lastSentAt ? new Date(v.lastSentAt).toLocaleDateString('ko-KR') : '-';
-            var options = VENDOR_STATUS_OPTIONS_.map(function (s) {
-              return '<option value="' + s + '"' + (s === v.status ? ' selected' : '') + '>' + s + '</option>';
-            }).join('');
-            return '<tr>' +
-              '<td>' + escapeHtml(v.name) + '</td>' +
-              '<td>' + escapeHtml(v.contact || '-') + '</td>' +
-              '<td>' + escapeHtml(v.email) + '</td>' +
-              '<td><select class="vendor-status-select" data-id="' + escapeHtml(v.id) + '">' + options + '</select></td>' +
-              '<td>' + lastSent + '</td>' +
-              '<td>' + (v.sentCount || 0) + '</td>' +
-              '<td class="memo-cell">' + escapeHtml(v.memo || '') + '</td>' +
-              '<td class="vendor-actions">' +
-                '<button type="button" class="vendor-row-btn" data-action="edit" data-id="' + escapeHtml(v.id) + '">수정</button>' +
-                '<button type="button" class="vendor-row-btn danger" data-action="delete" data-id="' + escapeHtml(v.id) + '">삭제</button>' +
-              '</td>' +
-              '</tr>';
-          }).join('');
-          tbody.querySelectorAll('.vendor-status-select').forEach(function (sel) {
-            sel.addEventListener('change', function () {
-              google.script.run
-                .withFailureHandler(function (err) { alert('상태 변경 오류: ' + err.message); })
-                .updateVendorStatus(sel.dataset.id, sel.value);
-            });
-          });
-          tbody.querySelectorAll('[data-action="edit"]').forEach(function (btn) {
-            btn.addEventListener('click', function () { startEditVendor_(btn.dataset.id); });
-          });
-          tbody.querySelectorAll('[data-action="delete"]').forEach(function (btn) {
-            btn.addEventListener('click', function () { deleteVendorRow_(btn.dataset.id); });
-          });
+          applyVendorFilter_();
         })
         .withFailureHandler(function (err) {
           tbody.innerHTML = '<tr><td colspan="8" class="vendor-empty">불러오기 오류: ' + escapeHtml(err.message) + '</td></tr>';
@@ -1951,22 +1997,29 @@
     }
 
     // ---------- 발행 캘린더 ----------
-    var CHANNEL_LABELS_ = { instagram: '인스타그램', threads: '스레드', naverBlog: '네이버 블로그', fridgeMagazine: '프릿지 매거진' };
-    var CHANNEL_COLORS_ = { instagram: 'var(--cal-instagram)', threads: 'var(--cal-threads)', naverBlog: 'var(--cal-naver)', fridgeMagazine: 'var(--cal-magazine)' };
+    var CHANNEL_LABELS_ = { instagram: '인스타그램', threads: '스레드', naverBlog: '네이버 블로그', fridgeMagazine: '프릿지 매거진', vendor: '입점 제안' };
+    var CHANNEL_COLORS_ = { instagram: 'var(--cal-instagram)', threads: 'var(--cal-threads)', naverBlog: 'var(--cal-naver)', fridgeMagazine: 'var(--cal-magazine)', vendor: 'var(--cal-vendor)' };
     var calState = { current: new Date(), data: [], selectedKey: null };
 
     function dateKey(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
 
     function loadCalendar(afterLoad) {
       document.getElementById('calMonthLabel').textContent = (calState.current.getFullYear()) + '년 ' + (calState.current.getMonth() + 1) + '월';
+      var contentRows = null, vendorRows = null;
+      function tryFinish() {
+        if (contentRows === null || vendorRows === null) return;
+        calState.data = contentRows.concat(vendorRows);
+        renderCalendarGrid();
+        if (afterLoad) afterLoad();
+      }
       google.script.run
-        .withSuccessHandler(function (rows) {
-          calState.data = rows || [];
-          renderCalendarGrid();
-          if (afterLoad) afterLoad();
-        })
-        .withFailureHandler(function () { calState.data = []; renderCalendarGrid(); if (afterLoad) afterLoad(); })
+        .withSuccessHandler(function (rows) { contentRows = rows || []; tryFinish(); })
+        .withFailureHandler(function () { contentRows = []; tryFinish(); })
         .getPublishCalendar();
+      google.script.run
+        .withSuccessHandler(function (rows) { vendorRows = rows || []; tryFinish(); })
+        .withFailureHandler(function () { vendorRows = []; tryFinish(); })
+        .getVendorCalendarEvents();
     }
 
     function renderCalendarGrid() {
@@ -2052,11 +2105,15 @@
           var linkHtml = url
             ? '<a class="cal-ch-link" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer">게시물 보기</a>'
             : '';
+          // 입점 제안(vendor)은 취소 버튼 대신 "입점 제안 탭에서 관리" 안내로 대체 (clearChannelStatus 대상이 아님)
+          var actionHtml = ch === 'vendor'
+            ? '<span class="cal-vendor-hint">입점 제안 탭에서 관리</span>'
+            : '<button type="button" class="cal-cancel-btn" data-id="' + escapeHtml(row.id) + '" data-ch="' + ch + '">취소</button>';
           return '<span class="cal-ch-row">' +
             '<span class="cal-dot" style="--c:' + (CHANNEL_COLORS_[ch] || 'var(--accent)') + '"></span>' +
             '<span class="cal-ch-name">' + CHANNEL_LABELS_[ch] + '</span>' +
             linkHtml +
-            '<button type="button" class="cal-cancel-btn" data-id="' + escapeHtml(row.id) + '" data-ch="' + ch + '">취소</button>' +
+            actionHtml +
             '</span>';
         }).join('');
         return '<div class="cal-detail-item">' +
