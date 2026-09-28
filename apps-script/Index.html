@@ -1202,6 +1202,7 @@
 
     function loadVendorList() {
       var tbody = document.getElementById('vendorTableBody');
+      document.getElementById('vendorPreviewResult').textContent = ''; // 목록이 바뀌면 예전 미리보기 결과는 지워서 헷갈리지 않게 함
       google.script.run
         .withSuccessHandler(function (rows) {
           vendorRowsCache_ = rows || [];
