@@ -1304,6 +1304,17 @@ function sendTestVendorEmail(toEmail, settings) {
   return { ok: true, aiApplied: result.aiApplied, aiReason: result.aiReason };
 }
 
+/**
+ * ===== 임시 도구: Gmail 발송 권한을 편집기에서 직접 승인받기 위한 함수 =====
+ * 화면(웹앱)에서는 새 권한 승인 창을 띄울 수 없어서, 이 함수를 편집기에서 직접 한 번
+ * 실행해 승인 창을 띄웁니다. 아래 이메일 주소를 원하는 주소로 바꾼 뒤,
+ * 편집기 상단 함수 드롭다운에서 이 함수(tempAuthorizeGmailForVendorTest)를 선택해
+ * ▶ 실행하세요. 승인 후에는 이 함수를 지우거나 그냥 남겨둬도 상관없습니다(위험한 값이 없음).
+ */
+function tempAuthorizeGmailForVendorTest() {
+  sendTestVendorEmail('sekim386@gmail.com', null);
+}
+
 /** 화면에서 호출 — 등록된 업체 목록을 반환합니다. */
 function getVendorList() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_SHEET_);
