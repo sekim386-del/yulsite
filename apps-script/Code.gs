@@ -1225,6 +1225,77 @@ function addVendor(name, contact, email, memo) {
   return { ok: true, id: id };
 }
 
+/**
+ * 여러 업체를 한 번에 등록합니다. text는 한 줄에 하나씩, "업체명,담당자,이메일,메모" 형식
+ * (담당자/메모는 생략 가능: "업체명,,이메일" 처럼 빈 칸으로 두면 됩니다).
+ * 업체명이나 이메일이 없는 줄, 이메일 형식이 아닌 줄은 건너뛰고 skipped에 이유와 함께 담아 반환합니다.
+ */
+function addVendorsBulk(text) {
+  var lines = String(text || '').split('\n');
+  var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  var rowsToAdd = [];
+  var skipped = [];
+  var now = new Date();
+
+  lines.forEach(function (line, idx) {
+    var raw = line.trim();
+    if (!raw) return;
+    var parts = raw.split(',').map(function (p) { return p.trim(); });
+    var name = parts[0] || '';
+    var contact = parts[1] || '';
+    var email = parts[2] || '';
+    var memo = parts.slice(3).join(',').trim();
+
+    if (!name || !email) { skipped.push({ line: idx + 1, text: raw, reason: '업체명 또는 이메일 누락' }); return; }
+    if (!emailPattern.test(email)) { skipped.push({ line: idx + 1, text: raw, reason: '이메일 형식 오류' }); return; }
+
+    rowsToAdd.push([
+      'VEND_' + now.getTime() + '_' + rowsToAdd.length,
+      name, contact, email, '대기중', '', 0, now, memo, Utilities.getUuid()
+    ]);
+  });
+
+  if (rowsToAdd.length) {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(VENDOR_SHEET_);
+    if (!sheet) { setupVendorOutreachSheets(); sheet = ss.getSheetByName(VENDOR_SHEET_); }
+    var startRow = sheet.getLastRow() + 1;
+    sheet.getRange(startRow, 1, rowsToAdd.length, rowsToAdd[0].length).setValues(rowsToAdd);
+  }
+
+  return { ok: true, added: rowsToAdd.length, skipped: skipped };
+}
+
+/**
+ * 화면에서 호출 — 지금 저장된(또는 화면에서 아직 저장 전인) 템플릿을 샘플 업체 데이터로 채워
+ * 실제 발송 시 어떻게 보일지 미리 보여줍니다. settings를 안 넘기면 시트에 저장된 값을 씁니다.
+ */
+function previewVendorEmail(settings) {
+  var s = (settings && (settings.subject || settings.body)) ? settings : loadVendorSettings_();
+  var sample = { name: '(주)샘플컴퍼니', contact: '김담당', email: 'sample@example.com' };
+  var optOutUrl = ScriptApp.getService().getUrl() + '?optout=샘플토큰';
+  return {
+    subject: fillVendorTemplate_(s.subject, sample, optOutUrl),
+    body: fillVendorTemplate_(s.body, sample, optOutUrl)
+  };
+}
+
+/**
+ * 화면에서 호출 — 실제 업체에게 나가기 전에, 저장된(또는 화면에서 입력 중인) 템플릿을
+ * 내가 지정한 이메일로 먼저 보내서 실제 수신함에서 어떻게 보이는지 확인합니다.
+ * 업체리스트에는 전혀 기록되지 않고, 발송횟수에도 영향 없는 순수 테스트 발송입니다.
+ */
+function sendTestVendorEmail(toEmail, settings) {
+  if (!toEmail) throw new Error('테스트로 받을 이메일 주소를 입력해주세요.');
+  var s = (settings && (settings.subject || settings.body)) ? settings : loadVendorSettings_();
+  var sample = { name: '(주)샘플컴퍼니', contact: '김담당', email: toEmail };
+  var optOutUrl = ScriptApp.getService().getUrl() + '?optout=샘플토큰(테스트)';
+  var subject = '[테스트] ' + fillVendorTemplate_(s.subject, sample, optOutUrl);
+  var body = fillVendorTemplate_(s.body, sample, optOutUrl);
+  GmailApp.sendEmail(toEmail, subject, body);
+  return { ok: true };
+}
+
 /** 화면에서 호출 — 등록된 업체 목록을 반환합니다. */
 function getVendorList() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_SHEET_);
