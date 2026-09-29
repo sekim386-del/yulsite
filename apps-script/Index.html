@@ -201,6 +201,13 @@
     .step-num.done { background: var(--accent-bright); }
     .step-num.done::before { content: '✓'; }
     .step-num.done span { display: none; }
+    .vendor-onboarding-steps { display: flex; flex-direction: column; gap: 18px; margin: 18px 0; }
+    .vendor-onboard-step { display: flex; gap: 14px; align-items: flex-start; }
+    .vendor-onboard-step .step-num { margin-top: 1px; }
+    .vendor-onboard-body { flex: 1; min-width: 0; }
+    .vendor-onboard-title { font-size: 13.5px; font-weight: 700; color: var(--ink); margin: 0 0 4px; }
+    .vendor-onboard-desc { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 8px; line-height: 1.5; }
+    .vendor-onboard-body .reset-btn { margin: 0; }
     .panel-title .hint { font-weight: 400; font-size: 12px; color: var(--ink-faint); font-family: "Noto Sans KR", sans-serif; margin-left: 2px; }
     .panel-head-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 20px; }
     .panel-head-row .panel-title { margin-bottom: 0; }
@@ -947,10 +954,40 @@
               자동으로 관리합니다. <b>후보 업체는 자동으로 수집하지 않습니다</b> — 담당자가 직접 확보한 연락처만
               아래에 등록해주세요 (정보통신망법상 자동 수집한 주소로 광고성 메일을 보내는 것은 제한됩니다).
             </p>
-            <div class="btn-row">
-              <button class="reset-btn" id="vendorSetupBtn" type="button">① 시트 초기 설정</button>
-              <button class="reset-btn primary" id="vendorInstallTriggerBtn" type="button">② 자동 발송/확인 시작</button>
+
+            <div class="vendor-onboarding-steps">
+              <div class="vendor-onboard-step">
+                <span class="step-num"><span>1</span></span>
+                <div class="vendor-onboard-body">
+                  <p class="vendor-onboard-title">시트 초기 설정 (최초 1회)</p>
+                  <p class="vendor-onboard-desc">업체 목록·설정을 저장할 시트를 자동으로 만듭니다. 이미 만들어져 있으면 다시 눌러도 데이터는 그대로 유지됩니다.</p>
+                  <button class="reset-btn" id="vendorSetupBtn" type="button">① 시트 초기 설정</button>
+                </div>
+              </div>
+              <div class="vendor-onboard-step">
+                <span class="step-num"><span>2</span></span>
+                <div class="vendor-onboard-body">
+                  <p class="vendor-onboard-title">입점 후보 업체 등록</p>
+                  <p class="vendor-onboard-desc">아래 "입점 후보 업체 등록"에서 최소 1곳 이상 업체명·이메일을 등록해주세요. (담당자가 직접 확보한 연락처만)</p>
+                </div>
+              </div>
+              <div class="vendor-onboard-step">
+                <span class="step-num"><span>3</span></span>
+                <div class="vendor-onboard-body">
+                  <p class="vendor-onboard-title">메일 문구·발송 설정 확인</p>
+                  <p class="vendor-onboard-desc">아래 "발송 설정 및 메일 템플릿"에서 제목·본문을 확인·수정 후 저장하고, "미리보기"로 실제 발송될 내용을 먼저 확인하세요.</p>
+                </div>
+              </div>
+              <div class="vendor-onboard-step">
+                <span class="step-num"><span>4</span></span>
+                <div class="vendor-onboard-body">
+                  <p class="vendor-onboard-title">자동 발송/회신 확인 시작</p>
+                  <p class="vendor-onboard-desc">누르면 2주마다 자동 발송, 매일 회신 확인이 시작됩니다. 처음 누를 때 Gmail 접근 권한 승인이 필요합니다.</p>
+                  <button class="reset-btn primary" id="vendorInstallTriggerBtn" type="button">② 자동 발송/확인 시작</button>
+                </div>
+              </div>
             </div>
+
             <p class="status status-note" id="vendorSetupStatus"></p>
             <p class="settings-note" style="margin-top:10px;">
               ※ "② 자동 발송/확인 시작"을 처음 누르면 Gmail 접근 권한이 필요합니다. 이 화면에서 오류가 나면,
