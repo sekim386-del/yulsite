@@ -1013,20 +1013,20 @@
             <div class="panel-title">입점 후보 업체 등록</div>
             <div class="grid2">
               <div class="field">
-                <label>업체명</label>
+                <label>업체명 <span class="req must">필수</span></label>
                 <input type="text" id="vendorName" placeholder="예: OO컴퍼니">
               </div>
               <div class="field">
-                <label>담당자 <span class="field-hint">선택사항</span></label>
+                <label>담당자 <span class="req opt">선택</span></label>
                 <input type="text" id="vendorContact" placeholder="예: 홍길동 팀장">
               </div>
             </div>
             <div class="field">
-              <label>이메일</label>
+              <label>이메일 <span class="req must">필수</span></label>
               <input type="text" id="vendorEmail" placeholder="contact@company.com">
             </div>
             <div class="field">
-              <label>메모 <span class="field-hint">선택사항</span></label>
+              <label>메모 <span class="req opt">선택</span></label>
               <input type="text" id="vendorMemo" placeholder="어디서 발굴했는지, 특이사항 등">
             </div>
             <div class="btn-row" style="margin-top:0;">
@@ -1035,7 +1035,7 @@
             </div>
             <p class="status status-note" id="vendorAddStatus"></p>
 
-            <p class="field-label field-label-spaced">여러 업체 한 번에 등록 <span class="muted">한 줄에 하나씩, "업체명,담당자,이메일,메모" 형식 (담당자·메모는 비워도 됨)</span></p>
+            <p class="field-label field-label-spaced">여러 업체 한 번에 등록 <span class="muted">한 줄에 하나씩, "업체명,담당자,이메일,메모" 형식 (<b>업체명·이메일 필수</b>, 담당자·메모는 비워도 됨)</span></p>
             <textarea id="vendorBulkText" class="textarea-lg" placeholder="OO컴퍼니,홍길동,contact@ooo.com,전시회에서 명함 받음
 △△브랜드,,hello@xxx.com"></textarea>
             <button class="reset-btn primary" id="vendorBulkAddBtn" type="button">일괄 등록</button>
