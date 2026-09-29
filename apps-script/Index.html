@@ -341,6 +341,7 @@
     .result-body:focus { outline: none; border-color: var(--accent); background: var(--paper); box-shadow: 0 0 0 3px var(--accent-tint); }
     .field-label { font-size: 12px; font-weight: 700; color: var(--ink-soft); margin: 0 0 7px; display: flex; align-items: baseline; gap: 6px; }
     .field-label .muted { font-weight: 400; color: var(--ink-faint); }
+    .field-label[hidden] { display: none; }
 
     /* ---------- 문구 작성지침 (채널별 세분화) ---------- */
     .guide-section { margin-bottom: 22px; }
@@ -554,14 +555,14 @@
       <div class="content-inner">
         <header class="page-head">
           <div>
-            <p class="eyebrow">Dashboard</p>
-            <h1>율사이트 콘텐츠 자동 생성배포 시스템</h1>
-            <p class="head-sub">1개의 소스로 인스타그램 · 스레드 · 네이버블로그 · 프릿지매거진 문구를 한 번에 생성합니다</p>
+            <p class="eyebrow" id="pageEyebrow">Dashboard</p>
+            <h1 id="pageTitle">율사이트 콘텐츠 자동 생성배포 시스템</h1>
+            <p class="head-sub" id="pageSub">1개의 소스로 인스타그램 · 스레드 · 네이버블로그 · 프릿지매거진 문구를 한 번에 생성합니다</p>
           </div>
           <p class="head-date"><b id="headDateLabel"></b>율사이트 × 상상우리</p>
         </header>
 
-        <div class="stats-strip">
+        <div class="stats-strip" id="mainStatsStrip">
           <div class="stat-card" style="--stat-color:var(--accent)">
             <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="m21 15-4.3-4.3a2 2 0 0 0-2.8 0L6 19"/></svg></div>
             <div class="stat-body">
@@ -592,7 +593,7 @@
           </div>
         </div>
 
-        <div class="guide-stepper">
+        <div class="guide-stepper" id="mainGuideStepper">
           <div class="guide-cell">
             <span class="guide-num">STEP 01</span>
             <span class="guide-label">사진 올리기</span>
@@ -948,10 +949,10 @@
             </div>
           </div>
           <div class="panel">
-            <div class="panel-title">입점 제안 자동화 — 시작하기</div>
+            <div class="panel-title">시작하기</div>
             <p class="settings-note">
-              신규 입점 후보 업체에게 2주 주기로 입점 제안 메일을 자동 발송하고, 중복 발송 방지·회신 확인까지
-              자동으로 관리합니다. <b>후보 업체는 자동으로 수집하지 않습니다</b> — 담당자가 직접 확보한 연락처만
+              2주 주기로 자동 발송되며, 중복 발송 방지·회신 확인까지 자동으로 처리됩니다.
+              <b>후보 업체는 자동으로 수집하지 않습니다</b> — 담당자가 직접 확보한 연락처만
               아래에 등록해주세요 (정보통신망법상 자동 수집한 주소로 광고성 메일을 보내는 것은 제한됩니다).
             </p>
 
@@ -961,7 +962,7 @@
                 <div class="vendor-onboard-body">
                   <p class="vendor-onboard-title">시트 초기 설정 (최초 1회)</p>
                   <p class="vendor-onboard-desc">업체 목록·설정을 저장할 시트를 자동으로 만듭니다. 이미 만들어져 있으면 다시 눌러도 데이터는 그대로 유지됩니다.</p>
-                  <button class="reset-btn" id="vendorSetupBtn" type="button">① 시트 초기 설정</button>
+                  <button class="reset-btn" id="vendorSetupBtn" type="button">시트 초기 설정</button>
                 </div>
               </div>
               <div class="vendor-onboard-step">
@@ -983,14 +984,14 @@
                 <div class="vendor-onboard-body">
                   <p class="vendor-onboard-title">자동 발송/회신 확인 시작</p>
                   <p class="vendor-onboard-desc">누르면 2주마다 자동 발송, 매일 회신 확인이 시작됩니다. 처음 누를 때 Gmail 접근 권한 승인이 필요합니다.</p>
-                  <button class="reset-btn primary" id="vendorInstallTriggerBtn" type="button">② 자동 발송/확인 시작</button>
+                  <button class="reset-btn primary" id="vendorInstallTriggerBtn" type="button">자동 발송/확인 시작</button>
                 </div>
               </div>
             </div>
 
             <p class="status status-note" id="vendorSetupStatus"></p>
             <p class="settings-note" style="margin-top:10px;">
-              ※ "② 자동 발송/확인 시작"을 처음 누르면 Gmail 접근 권한이 필요합니다. 이 화면에서 오류가 나면,
+              ※ "자동 발송/확인 시작"을 처음 누르면 Gmail 접근 권한이 필요합니다. 이 화면에서 오류가 나면,
               Apps Script 편집기 상단 함수 목록에서 <code>installVendorOutreachTriggers</code>를 선택해
               ▶ 실행 버튼으로 한 번 직접 실행해 권한 승인 창을 띄워주세요 (최초 1회만 필요).
               <code>@yulsight.com</code> 주소로 발송하려면 그 계정이 Google Workspace(유료)여야 합니다.
@@ -1173,6 +1174,13 @@
     }
 
     // ---------- 사이드바 탭 ----------
+    var TAB_HEADERS_ = {
+      main: { eyebrow: 'Dashboard', title: '율사이트 콘텐츠 자동 생성배포 시스템', sub: '1개의 소스로 인스타그램 · 스레드 · 네이버블로그 · 프릿지매거진 문구를 한 번에 생성합니다' },
+      calendar: { eyebrow: 'Calendar', title: '발행 캘린더', sub: '채널별 발행 이력과 입점 제안 발송 현황을 한눈에 확인합니다' },
+      vendors: { eyebrow: 'Vendor Outreach', title: '입점 제안 자동화', sub: '신규 입점 후보 업체에게 이메일을 자동 발송하고 회신까지 관리합니다' },
+      settings: { eyebrow: 'Settings', title: '설정', sub: '채널별 문구 작성지침과 API 연동 상태를 관리합니다' }
+    };
+
     document.querySelectorAll('.nav-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         document.querySelectorAll('.nav-btn').forEach(function (b) { b.classList.remove('active'); });
@@ -1182,6 +1190,14 @@
         document.getElementById('tab-calendar').style.display = tab === 'calendar' ? '' : 'none';
         document.getElementById('tab-vendors').style.display = tab === 'vendors' ? '' : 'none';
         document.getElementById('tab-settings').style.display = tab === 'settings' ? '' : 'none';
+        document.getElementById('mainStatsStrip').style.display = tab === 'main' ? '' : 'none';
+        document.getElementById('mainGuideStepper').style.display = tab === 'main' ? '' : 'none';
+        var h = TAB_HEADERS_[tab];
+        if (h) {
+          document.getElementById('pageEyebrow').textContent = h.eyebrow;
+          document.getElementById('pageTitle').textContent = h.title;
+          document.getElementById('pageSub').textContent = h.sub;
+        }
         if (tab === 'settings') loadGuidelines();
         if (tab === 'calendar') loadCalendar();
         if (tab === 'vendors') loadVendorTab();
