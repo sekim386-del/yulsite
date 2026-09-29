@@ -177,6 +177,7 @@
     .stat-label { font-size: 11px; color: var(--ink-faint); font-weight: 600; margin: 0 0 6px; }
     .stat-value { font-family: "Gowun Batang", serif; font-size: 21px; font-weight: 700; color: var(--ink); margin: 0; }
     .stat-value .unit { font-family: "Noto Sans KR", sans-serif; font-size: 12px; font-weight: 500; color: var(--ink-faint); margin-left: 2px; }
+    .stat-sub { font-size: 10.5px; color: var(--ink-faint); margin: 4px 0 0; }
 
     /* ---------- 패널 공통 ---------- */
     .panel {
@@ -434,6 +435,9 @@
     .vendor-table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 640px; }
     .vendor-table th, .vendor-table td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
     .vendor-table th { background: var(--paper-sunken); color: var(--ink-soft); font-weight: 700; font-size: 11.5px; }
+    .vendor-table th.sortable-th { cursor: pointer; user-select: none; }
+    .vendor-table th.sortable-th:hover { color: var(--accent-deep); }
+    .sort-arrow { display: inline-block; margin-left: 4px; font-size: 9px; color: var(--accent-deep); }
     .vendor-table tbody tr:last-child td { border-bottom: none; }
     .vendor-table td.memo-cell { white-space: normal; min-width: 140px; color: var(--ink-soft); }
     .vendor-status-select {
@@ -455,6 +459,21 @@
     .vendor-row-btn:hover { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-tint); }
     .vendor-row-btn.danger:hover { border-color: var(--danger); color: var(--danger); background: #fdf1ef; }
     .vendor-empty { text-align: center; color: var(--ink-faint); padding: 18px 0 !important; white-space: normal !important; }
+    .vendor-history-modal {
+      position: fixed; inset: 0; background: rgba(30, 24, 20, 0.4); z-index: 60;
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .vendor-history-card {
+      background: var(--paper); border-radius: var(--radius-md); padding: 20px;
+      width: min(440px, 100%); max-height: 72vh; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,0.28);
+    }
+    .vendor-history-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px; }
+    .vendor-history-header strong { font-size: 14px; color: var(--ink); }
+    .vendor-history-item { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--ink); }
+    .vendor-history-item:last-child { border-bottom: none; }
+    .vendor-history-item.fail { color: var(--danger); }
+    .vendor-history-reason { margin-top: 3px; font-size: 11.5px; color: var(--ink-faint); white-space: normal; }
+    .vendor-history-empty { color: var(--ink-faint); font-size: 12.5px; padding: 10px 0; }
     .vendor-ai-toggle-label { display: flex; align-items: flex-start; gap: 8px; cursor: pointer; font-size: 13px; color: var(--ink); }
     .vendor-ai-toggle-label input[type="checkbox"] { margin-top: 3px; flex: none; width: 16px; height: 16px; accent-color: var(--accent-deep); cursor: pointer; }
     .vendor-pause-panel { border: 1.5px dashed #e3c3bb; background: #fdf6f4; }
@@ -899,8 +918,9 @@
             <div class="stat-card" style="--stat-color:var(--gold)">
               <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7Z"/></svg></div>
               <div class="stat-body">
-                <p class="stat-label">발송완료</p>
-                <p class="stat-value" id="vendorStatSent">0<span class="unit">곳</span></p>
+                <p class="stat-label">발송 성공률</p>
+                <p class="stat-value" id="vendorStatSuccessRate">0<span class="unit">%</span></p>
+                <p class="stat-sub" id="vendorStatSuccessSub"></p>
               </div>
             </div>
             <div class="stat-card" style="--stat-color:var(--accent-deep)">
@@ -908,13 +928,15 @@
               <div class="stat-body">
                 <p class="stat-label">회신율</p>
                 <p class="stat-value" id="vendorStatReplyRate">0<span class="unit">%</span></p>
+                <p class="stat-sub" id="vendorStatReplySub"></p>
               </div>
             </div>
             <div class="stat-card" style="--stat-color:var(--clay)">
               <div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
               <div class="stat-body">
-                <p class="stat-label">입점완료</p>
-                <p class="stat-value" id="vendorStatDone">0<span class="unit">곳</span></p>
+                <p class="stat-label">입점 전환율</p>
+                <p class="stat-value" id="vendorStatDoneRate">0<span class="unit">%</span></p>
+                <p class="stat-sub" id="vendorStatDoneSub"></p>
               </div>
             </div>
           </div>
@@ -1000,12 +1022,31 @@
             <div class="table-scroll">
               <table class="vendor-table" id="vendorTable">
                 <thead>
-                  <tr><th>업체명</th><th>담당자</th><th>이메일</th><th>상태</th><th>최근발송</th><th>발송횟수</th><th>메모</th><th>작업</th></tr>
+                  <tr>
+                    <th class="sortable-th" data-sort="name">업체명<span class="sort-arrow" data-sort-arrow="name"></span></th>
+                    <th>담당자</th>
+                    <th>이메일</th>
+                    <th class="sortable-th" data-sort="status">상태<span class="sort-arrow" data-sort-arrow="status"></span></th>
+                    <th class="sortable-th" data-sort="lastSentAt">최근발송<span class="sort-arrow" data-sort-arrow="lastSentAt"></span></th>
+                    <th class="sortable-th" data-sort="sentCount">발송횟수<span class="sort-arrow" data-sort-arrow="sentCount"></span></th>
+                    <th>메모</th>
+                    <th>작업</th>
+                  </tr>
                 </thead>
                 <tbody id="vendorTableBody">
                   <tr><td colspan="8" class="vendor-empty">등록된 업체가 없습니다.</td></tr>
                 </tbody>
               </table>
+            </div>
+          </div>
+
+          <div id="vendorHistoryModal" class="vendor-history-modal" style="display:none">
+            <div class="vendor-history-card">
+              <div class="vendor-history-header">
+                <strong id="vendorHistoryTitle">발송 이력</strong>
+                <button type="button" class="vendor-row-btn" id="vendorHistoryCloseBtn">닫기</button>
+              </div>
+              <div id="vendorHistoryBody"></div>
             </div>
           </div>
 
@@ -1234,14 +1275,29 @@
     function updateVendorStats_(rows) {
       rows = rows || [];
       var total = rows.length;
-      var sentOrLater = rows.filter(function (v) { return v.status !== '대기중'; }).length;
+      var totalSent = 0, totalFail = 0;
+      rows.forEach(function (v) {
+        totalSent += Number(v.sentCount) || 0;
+        totalFail += Number(v.failCount) || 0;
+      });
+      var totalAttempts = totalSent + totalFail;
+      var successRate = totalAttempts ? Math.round((totalSent / totalAttempts) * 100) : 0;
+      var contacted = rows.filter(function (v) { return (Number(v.sentCount) || 0) > 0; }).length;
       var replied = rows.filter(function (v) { return v.status === '회신됨' || v.status === '입점완료'; }).length;
       var done = rows.filter(function (v) { return v.status === '입점완료'; }).length;
-      var replyRate = sentOrLater ? Math.round((replied / sentOrLater) * 100) : 0;
+      var replyRate = contacted ? Math.round((replied / contacted) * 100) : 0;
+      var doneRate = contacted ? Math.round((done / contacted) * 100) : 0;
+
       document.getElementById('vendorStatTotal').innerHTML = total + '<span class="unit">곳</span>';
-      document.getElementById('vendorStatSent').innerHTML = sentOrLater + '<span class="unit">곳</span>';
+      document.getElementById('vendorStatSuccessRate').innerHTML = successRate + '<span class="unit">%</span>';
+      document.getElementById('vendorStatSuccessSub').textContent =
+        totalAttempts ? ('성공 ' + totalSent + '건 · 실패 ' + totalFail + '건') : '발송 이력 없음';
       document.getElementById('vendorStatReplyRate').innerHTML = replyRate + '<span class="unit">%</span>';
-      document.getElementById('vendorStatDone').innerHTML = done + '<span class="unit">곳</span>';
+      document.getElementById('vendorStatReplySub').textContent =
+        contacted ? (contacted + '곳 중 ' + replied + '곳 회신') : '발송된 업체 없음';
+      document.getElementById('vendorStatDoneRate').innerHTML = doneRate + '<span class="unit">%</span>';
+      document.getElementById('vendorStatDoneSub').textContent =
+        contacted ? (contacted + '곳 중 ' + done + '곳 입점 완료') : '발송된 업체 없음';
     }
 
     var vendorRowsCache_ = [];
@@ -1268,6 +1324,7 @@
           '<td class="memo-cell">' + escapeHtml(v.memo || '') + '</td>' +
           '<td class="vendor-actions">' +
             '<button type="button" class="vendor-row-btn" data-action="edit" data-id="' + escapeHtml(v.id) + '">수정</button>' +
+            '<button type="button" class="vendor-row-btn" data-action="history" data-id="' + escapeHtml(v.id) + '">이력</button>' +
             '<button type="button" class="vendor-row-btn danger" data-action="delete" data-id="' + escapeHtml(v.id) + '">삭제</button>' +
           '</td>' +
           '</tr>';
@@ -1285,9 +1342,88 @@
       tbody.querySelectorAll('[data-action="delete"]').forEach(function (btn) {
         btn.addEventListener('click', function () { deleteVendorRow_(btn.dataset.id); });
       });
+      tbody.querySelectorAll('[data-action="history"]').forEach(function (btn) {
+        btn.addEventListener('click', function () { openVendorHistory_(btn.dataset.id); });
+      });
     }
 
-    /** 검색어/상태 필터를 캐시된 목록(vendorRowsCache_)에 적용해 다시 그립니다 (서버 재조회 없음). */
+    function openVendorHistory_(id) {
+      var v = vendorRowsCache_.find(function (r) { return r.id === id; });
+      document.getElementById('vendorHistoryTitle').textContent = (v ? v.name : '업체') + ' 발송 이력';
+      document.getElementById('vendorHistoryBody').innerHTML = '불러오는 중...';
+      document.getElementById('vendorHistoryModal').style.display = 'flex';
+      google.script.run
+        .withSuccessHandler(function (history) {
+          if (!history || !history.length) {
+            document.getElementById('vendorHistoryBody').innerHTML = '<p class="vendor-history-empty">발송 이력이 없습니다.</p>';
+            return;
+          }
+          document.getElementById('vendorHistoryBody').innerHTML = history.map(function (h) {
+            var d = h.date ? new Date(h.date).toLocaleString('ko-KR') : '-';
+            var label = h.success ? '✓ 성공' : '✕ 실패';
+            var reasonHtml = (!h.success && h.reason) ? ('<div class="vendor-history-reason">' + escapeHtml(h.reason) + '</div>') : '';
+            return '<div class="vendor-history-item' + (h.success ? '' : ' fail') + '"><div>' + d + ' — ' + label + '</div>' + reasonHtml + '</div>';
+          }).join('');
+        })
+        .withFailureHandler(function (err) {
+          document.getElementById('vendorHistoryBody').innerHTML = '불러오기 오류: ' + escapeHtml(err.message);
+        })
+        .getVendorSendHistory(id);
+    }
+
+    document.getElementById('vendorHistoryCloseBtn').addEventListener('click', function () {
+      document.getElementById('vendorHistoryModal').style.display = 'none';
+    });
+    document.getElementById('vendorHistoryModal').addEventListener('click', function (e) {
+      if (e.target === document.getElementById('vendorHistoryModal')) {
+        document.getElementById('vendorHistoryModal').style.display = 'none';
+      }
+    });
+
+    var vendorSortState_ = { key: null, dir: 1 };
+
+    function updateVendorSortArrows_() {
+      document.querySelectorAll('#vendorTable [data-sort-arrow]').forEach(function (el) {
+        el.textContent = (el.dataset.sortArrow === vendorSortState_.key) ? (vendorSortState_.dir === 1 ? '▲' : '▼') : '';
+      });
+    }
+
+    function sortVendorRows_(rows) {
+      if (!vendorSortState_.key) return rows;
+      var key = vendorSortState_.key, dir = vendorSortState_.dir;
+      return rows.slice().sort(function (a, b) {
+        var av = a[key], bv = b[key];
+        if (key === 'lastSentAt') {
+          av = av ? new Date(av).getTime() : 0;
+          bv = bv ? new Date(bv).getTime() : 0;
+        } else if (key === 'sentCount') {
+          av = Number(av) || 0;
+          bv = Number(bv) || 0;
+        } else {
+          av = (av || '').toString().toLowerCase();
+          bv = (bv || '').toString().toLowerCase();
+        }
+        if (av < bv) return -1 * dir;
+        if (av > bv) return 1 * dir;
+        return 0;
+      });
+    }
+
+    document.querySelectorAll('#vendorTable th.sortable-th').forEach(function (th) {
+      th.addEventListener('click', function () {
+        var key = th.dataset.sort;
+        if (vendorSortState_.key === key) {
+          vendorSortState_.dir *= -1;
+        } else {
+          vendorSortState_.key = key;
+          vendorSortState_.dir = 1;
+        }
+        updateVendorSortArrows_();
+        applyVendorFilter_();
+      });
+    });
+
+    /** 검색어/상태 필터 + 정렬을 캐시된 목록(vendorRowsCache_)에 적용해 다시 그립니다 (서버 재조회 없음). */
     function applyVendorFilter_() {
       var q = document.getElementById('vendorSearchInput').value.trim().toLowerCase();
       var statusFilter = document.getElementById('vendorStatusFilter').value;
@@ -1297,7 +1433,7 @@
         var haystack = [v.name, v.contact, v.email, v.memo].join(' ').toLowerCase();
         return haystack.indexOf(q) !== -1;
       });
-      renderVendorRows_(filtered);
+      renderVendorRows_(sortVendorRows_(filtered));
     }
 
     document.getElementById('vendorSearchInput').addEventListener('input', applyVendorFilter_);

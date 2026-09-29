@@ -1129,11 +1129,12 @@ function postThreads(imageUrl, caption) {
 
 var VENDOR_SHEET_ = '입점제안_업체리스트';
 var VENDOR_SETTINGS_SHEET_ = '입점제안_설정';
+var VENDOR_LOG_SHEET_ = '입점제안_발송이력';
 
 /** 시트 열 번호(1-indexed) — 업체리스트 시트 기준 */
 var VENDOR_COLS_ = {
   id: 1, name: 2, contact: 3, email: 4, status: 5,
-  lastSentAt: 6, sentCount: 7, createdAt: 8, memo: 9, optOutToken: 10
+  lastSentAt: 6, sentCount: 7, createdAt: 8, memo: 9, optOutToken: 10, failCount: 11
 };
 
 var VENDOR_SKIP_STATUSES_ = ['회신됨', '입점완료', '보류', '수신거부'];
@@ -1180,8 +1181,17 @@ function setupVendorOutreachSheets() {
   var vendors = ss.getSheetByName(VENDOR_SHEET_);
   if (!vendors) {
     vendors = ss.insertSheet(VENDOR_SHEET_);
-    vendors.appendRow(['ID', '업체명', '담당자', '이메일', '상태', '최근발송일', '발송횟수', '등록일', '메모', '수신거부토큰']);
+    vendors.appendRow(['ID', '업체명', '담당자', '이메일', '상태', '최근발송일', '발송횟수', '등록일', '메모', '수신거부토큰', '발송실패횟수']);
     vendors.setFrozenRows(1);
+  } else {
+    // 이미 만들어져 있던 시트라면, 나중에 추가된 열(발송실패횟수 등)의 머리글이 비어있을 때만
+    // 채워 넣습니다 — 기존 데이터는 건드리지 않습니다.
+    var vendorHeader = ['ID', '업체명', '담당자', '이메일', '상태', '최근발송일', '발송횟수', '등록일', '메모', '수신거부토큰', '발송실패횟수'];
+    var lastCol = Math.max(vendors.getLastColumn(), 1);
+    var currentVendorHeader = vendors.getRange(1, 1, 1, Math.max(lastCol, vendorHeader.length)).getValues()[0];
+    for (var vc = 0; vc < vendorHeader.length; vc++) {
+      if (!currentVendorHeader[vc]) vendors.getRange(1, vc + 1).setValue(vendorHeader[vc]);
+    }
   }
 
   return { ok: true, message: '입점 제안 시트 준비 완료' };
@@ -1279,7 +1289,7 @@ function addVendor(name, contact, email, memo) {
 
   var id = 'VEND_' + new Date().getTime();
   var token = Utilities.getUuid();
-  sheet.appendRow([id, name, contact || '', email, '대기중', '', 0, new Date(), memo || '', token]);
+  sheet.appendRow([id, name, contact || '', email, '대기중', '', 0, new Date(), memo || '', token, 0]);
   return { ok: true, id: id };
 }
 
@@ -1309,7 +1319,7 @@ function addVendorsBulk(text) {
 
     rowsToAdd.push([
       'VEND_' + now.getTime() + '_' + rowsToAdd.length,
-      name, contact, email, '대기중', '', 0, now, memo, Utilities.getUuid()
+      name, contact, email, '대기중', '', 0, now, memo, Utilities.getUuid(), 0
     ]);
   });
 
@@ -1382,7 +1392,8 @@ function getVendorList() {
       lastSentAt: r[5] ? new Date(r[5]).toISOString() : '',
       sentCount: r[6] || 0,
       createdAt: r[7] ? new Date(r[7]).toISOString() : '',
-      memo: r[8] || ''
+      memo: r[8] || '',
+      failCount: r[10] || 0
     });
   }
   return rows;
@@ -1587,13 +1598,47 @@ function sendVendorProposals() {
       sheet.getRange(i + 1, VENDOR_COLS_.lastSentAt).setValue(now);
       sheet.getRange(i + 1, VENDOR_COLS_.sentCount).setValue((Number(r[6]) || 0) + 1);
       sentThisRun++;
+      logVendorSendEvent_(r[0], vendor.name, true, '');
     } catch (e) {
       Logger.log('발송 실패 (' + vendor.email + '): ' + e.message);
+      sheet.getRange(i + 1, VENDOR_COLS_.failCount).setValue((Number(r[10]) || 0) + 1);
+      logVendorSendEvent_(r[0], vendor.name, false, e.message);
     }
   }
 
   Logger.log('이번 실행에서 ' + sentThisRun + '건 발송했습니다.');
   return { ok: true, sentCount: sentThisRun };
+}
+
+/** 발송 이력 로그 시트("입점제안_발송이력")에 발송 시도 1건을 기록합니다. 시트가 없으면 자동 생성합니다. */
+function logVendorSendEvent_(vendorId, vendorName, success, reason) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(VENDOR_LOG_SHEET_);
+    if (!sheet) {
+      sheet = ss.insertSheet(VENDOR_LOG_SHEET_);
+      sheet.appendRow(['업체ID', '업체명', '일시', '결과', '사유']);
+      sheet.setFrozenRows(1);
+    }
+    sheet.appendRow([vendorId, vendorName, new Date(), success ? '성공' : '실패', reason || '']);
+  } catch (e) {
+    Logger.log('발송 이력 기록 실패: ' + e.message);
+  }
+}
+
+/** 화면에서 호출 — 업체 한 곳의 발송 이력(최신순)을 반환합니다. */
+function getVendorSendHistory(vendorId) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VENDOR_LOG_SHEET_);
+  if (!sheet) return [];
+  var data = sheet.getDataRange().getValues();
+  var rows = [];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    if (r[0] !== vendorId) continue;
+    rows.push({ date: r[2] ? new Date(r[2]).toISOString() : '', success: r[3] === '성공', reason: r[4] || '' });
+  }
+  rows.reverse(); // 최신순
+  return rows;
 }
 
 /**
